@@ -7,15 +7,21 @@ from . import errors
 from .random import DISTRIBUTION_TYPES
 from .jobs import Job
 
+STATUS_RUNNING = 0
+STATUS_DONE = 1
+
 class Experiment(object):
-    def __init__(self, name):
+    def __init__(self, name, status):
         self.name = name
+        self.status = status
         self._db = None
 
     def next_job(self):
         assert self._db is not None, 'Experiment was not added to a database'
         url = urljoin(self._db._experiment_url(self.name), 'nextjob/')
         response = requests.get(url)
+        if response.status_code == requests.codes.no_content:
+            raise errors.NoJobError('No job left for experiment {}.'.format(self.name), None)
         errors._handle_response_errors(response)
         try:
             content = response.json()
@@ -54,26 +60,30 @@ class Experiment(object):
     @staticmethod
     def _from_map_definition(schedulers, map_def):
         try:
-            name = map_def['Name']
-            scheduler = map_def['SchedulerName']
-            params = map_def['SchedulerParams']
-        except KeyError as e:
+            name = str(map_def['Name'])
+            status = int(map_def['Status'])
+            scheduler = str(map_def['SchedulerName'])
+            params = dict(map_def['SchedulerParams'])
+        except (ValueError, KeyError) as e:
             raise ValueError('Invalid map definition for experiment.') from e
         try:
             exp_type = schedulers[scheduler]
         except KeyError as e:
             raise ValueError('Invalid or unregistered scheduler name: {}.'.format(scheduler))
-        return exp_type._create_from_params(name, params)
+        return exp_type._create_from_params(
+                name=name,
+                status=status,
+                params=params)
 
 class RandomSearch(Experiment):
     SCHEDULER_NAME = 'RandomSearch'
 
-    def __init__(self, name, distributions):
-        super().__init__(name)
+    def __init__(self, name, distributions, status=STATUS_RUNNING):
+        super().__init__(name, status)
         self.distributions = distributions
 
     @classmethod
-    def _create_from_params(cls, name, params):
+    def _create_from_params(cls, name, status, params):
         try:
             items = params.items()
         except AttributeError as e:
@@ -81,7 +91,7 @@ class RandomSearch(Experiment):
         distributions = dict()
         for key, map_def in items:
             try:
-                dist_name = map_def['name']
+                dist_name = str(map_def['name'])
                 dist_args = list(map_def['args'])
             except (KeyError, TypeError) as e:
                 raise ValueError('Invalid distribution definition.') from e
@@ -90,7 +100,7 @@ class RandomSearch(Experiment):
             except KeyError as e:
                 raise ValueError('Invalid or unknown distribution type: {}.'.format(dist_name))
             distributions[key] = dist_type.from_args_list(dist_args)
-        return cls(name, distributions)
+        return cls(name=name, distributions=distributions, status=status)
 
     def _get_params(self):
         return {key: {'name': dist.FUNC_NAME, 'args': dist.args_list()} for key, dist in self.distributions.items()}

@@ -28,6 +28,9 @@ class ClientRequestError(ClientError):
 class ResourceExistsError(ClientRequestError):
     pass
 
+class NoJobError(ClientRequestError):
+    pass
+
 class UnhandledResponseError(ClientError):
     pass
 

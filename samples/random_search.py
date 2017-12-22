@@ -20,7 +20,6 @@ if __name__ == '__main__':
     try:
         db.add_experiment(exp)
     except ResourceExistsError:
-        print('Experiment already exists, retrieving it.')
         exp = db.get_experiment(exp.name)
     while True:
         with exp.next_job() as job:
