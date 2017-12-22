@@ -49,6 +49,20 @@ class Choice(object):
             return cls(values, weights)
         return cls(values)
 
+class Normal(object):
+    FUNC_NAME = 'normal'
+
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def args_list(self):
+        return [self.mean, self.std]
+
+    @classmethod
+    def from_args_list(cls, args):
+        return cls(*_cast_args(cls, args, [float, float]))
+
 class Constant(object):
     FUNC_NAME = 'const'
 
