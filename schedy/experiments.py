@@ -1,17 +1,31 @@
 # -*- coding: utf-8 -*-
 
+import requests
+from urllib.parse import urljoin
+
+from . import errors
 from .random import DISTRIBUTION_TYPES
+from .jobs import Job
 
 class Experiment(object):
     def __init__(self, name):
         self.name = name
         self._db = None
 
-    def done(self):
-        raise NotImplementedError()
-
     def next_job(self):
-        raise NotImplementedError()
+        assert self._db is not None, 'Experiment was not added to a database'
+        url = urljoin(self._db._experiment_url(self.name), 'nextjob/')
+        response = requests.get(url)
+        errors._handle_response_errors(response)
+        try:
+            content = response.json()
+        except ValueError as e:
+            raise errors.ServerError('Response contains invalid JSON:\n' + response.text, None) from e
+        try:
+            job = Job._from_map_definition(self, content)
+        except ValueError as e:
+            raise errors.ServerError('Response contains an invalid experiment.', None) from e
+        return job
 
     def __str__(self):
         try:

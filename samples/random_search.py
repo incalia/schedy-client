@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import time
+
 from schedy import SchedyDB, RandomSearch
 from schedy.errors import ResourceExistsError
 from schedy.random import Choice, Uniform, Constant
@@ -18,6 +20,10 @@ if __name__ == '__main__':
     try:
         db.add_experiment(exp)
     except ResourceExistsError:
+        print('Experiment already exists, retrieving it.')
         exp = db.get_experiment(exp.name)
-    print(exp)
+    while True:
+        with exp.next_job() as job:
+            time.sleep(5)
+            job.results['quality'] = 0.5
 

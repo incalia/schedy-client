@@ -34,3 +34,13 @@ class UnhandledResponseError(ClientError):
 class ServerError(HTTPError):
     pass
 
+def _handle_response_errors(response):
+    code = response.status_code
+    if code in [200, 201, 204]:
+        return
+    if code in range(400, 500):
+        raise ClientRequestError(response.text, code)
+    if code in range(500, 600):
+        raise ServerError(response.text, code)
+    raise UnhandledResponseError(response.text, code)
+
