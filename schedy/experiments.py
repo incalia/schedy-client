@@ -2,6 +2,7 @@
 
 import requests
 from urllib.parse import urljoin
+import json
 
 from . import errors
 from .random import DISTRIBUTION_TYPES
@@ -33,11 +34,39 @@ class Experiment(object):
             raise errors.ServerError('Response contains an invalid experiment.', None) from e
         return job
 
+    def all_jobs(self):
+        url = urljoin(self._db._experiment_url(self.name), 'jobs/')
+        response = requests.get(url)
+        errors._handle_response_errors(response)
+        try:
+            content = list(response.json())
+        except ValueError as e:
+            raise errors.ServerError('Response contains invalid JSON list:\n' + response.text, None) from e
+        jobs = []
+        for job_data_raw in content:
+            try:
+                job_data = dict(job_data_raw)
+            except ValueError as e:
+                raise errors.ServerError('Excepting the description of a job as a dict, received type {}.'.format(type(job_data_raw)))
+            try:
+                job = Job._from_map_definition(self, job_data)
+            except ValueError as e:
+                raise errors.ServerError('Response contains an invalid job.', None) from e
+            jobs.append(job)
+        return jobs
+
     def __str__(self):
         try:
             return '{}(name={!r}, params={})'.format(self.__class__.__name__, self.name, self._get_params())
         except:
             return '{}(name={!r})'.format(self.__class__.__name__, self.name)
+
+    def push_updates(self):
+        url = self._db._experiment_url(self.name)
+        content = self._to_map_definition()
+        data = json.dumps(content)
+        response = requests.put(url, data=data)
+        errors._handle_response_errors(response)
 
     @classmethod
     def _create_from_params(cls, name, params):
@@ -53,6 +82,7 @@ class Experiment(object):
             raise AttributeError('Experiment implementations should define a SCHEDULER_NAME attribute') from e
         return {
                 'Name': self.name,
+                'Status': self.status,
                 'SchedulerName': scheduler,
                 'SchedulerParams': self._get_params(),
             }
