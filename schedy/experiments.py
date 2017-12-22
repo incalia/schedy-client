@@ -24,9 +24,9 @@ class Experiment(object):
             raise errors.NoJobError('No job left for experiment {}.'.format(self.name), None)
         errors._handle_response_errors(response)
         try:
-            content = response.json()
+            content = dict(response.json())
         except ValueError as e:
-            raise errors.ServerError('Response contains invalid JSON:\n' + response.text, None) from e
+            raise errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None) from e
         try:
             job = Job._from_map_definition(self, content)
         except ValueError as e:
