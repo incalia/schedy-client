@@ -4,7 +4,7 @@
 from schedy import SchedyDB
 
 if __name__ == '__main__':
-    db = SchedyDB('http://localhost:23456')
+    db = SchedyDB()
     for exp in db.get_experiments():
         print(exp)
 

@@ -20,7 +20,7 @@ class Experiment(object):
     def next_job(self):
         assert self._db is not None, 'Experiment was not added to a database'
         url = urljoin(self._db._experiment_url(self.name), 'nextjob/')
-        response = requests.get(url)
+        response = self._db._authenticated_request('GET', url)
         if response.status_code == requests.codes.no_content:
             raise errors.NoJobError('No job left for experiment {}.'.format(self.name), None)
         errors._handle_response_errors(response)
@@ -35,8 +35,9 @@ class Experiment(object):
         return job
 
     def all_jobs(self):
+        assert self._db is not None, 'Experiment was not added to a database'
         url = urljoin(self._db._experiment_url(self.name), 'jobs/')
-        response = requests.get(url)
+        response = self._db._authenticated_request('GET', url)
         errors._handle_response_errors(response)
         try:
             content = list(response.json())
@@ -65,7 +66,7 @@ class Experiment(object):
         url = self._db._experiment_url(self.name)
         content = self._to_map_definition()
         data = json.dumps(content)
-        response = requests.put(url, data=data)
+        response = self._db._perform_request('PUT', url, data=data)
         errors._handle_response_errors(response)
 
     @classmethod
@@ -81,19 +82,19 @@ class Experiment(object):
         except AttributeError as e:
             raise AttributeError('Experiment implementations should define a SCHEDULER_NAME attribute') from e
         return {
-                'Name': self.name,
-                'Status': self.status,
-                'SchedulerName': scheduler,
-                'SchedulerParams': self._get_params(),
+                'name': self.name,
+                'status': self.status,
+                'scheduler': [scheduler, self._get_params()],
             }
 
     @staticmethod
     def _from_map_definition(schedulers, map_def):
         try:
-            name = str(map_def['Name'])
-            status = int(map_def['Status'])
-            scheduler = str(map_def['SchedulerName'])
-            params = dict(map_def['SchedulerParams'])
+            name = str(map_def['name'])
+            status = int(map_def['status'])
+            scheduler_def = list(map_def['scheduler'])
+            scheduler = str(scheduler_def[0])
+            params = dict(scheduler_def[1])
         except (ValueError, KeyError) as e:
             raise ValueError('Invalid map definition for experiment.') from e
         try:
@@ -119,19 +120,19 @@ class RandomSearch(Experiment):
         except AttributeError as e:
             raise ValueError('Expected parameters as a dict, found {}.'.format(type(params)))
         distributions = dict()
-        for key, map_def in items:
+        for key, arr_def in items:
             try:
-                dist_name = str(map_def['name'])
-                dist_args = list(map_def['args'])
+                dist_name = str(arr_def[0])
+                dist_args = dict(arr_def[1])
             except (KeyError, TypeError) as e:
                 raise ValueError('Invalid distribution definition.') from e
             try:
                 dist_type = DISTRIBUTION_TYPES[dist_name]
             except KeyError as e:
                 raise ValueError('Invalid or unknown distribution type: {}.'.format(dist_name))
-            distributions[key] = dist_type.from_args_list(dist_args)
+            distributions[key] = dist_type.from_args(dist_args)
         return cls(name=name, distributions=distributions, status=status)
 
     def _get_params(self):
-        return {key: {'name': dist.FUNC_NAME, 'args': dist.args_list()} for key, dist in self.distributions.items()}
+        return {key: [dist.FUNC_NAME, dist.args()] for key, dist in self.distributions.items()}
 

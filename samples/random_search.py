@@ -8,7 +8,7 @@ from schedy.errors import ResourceExistsError
 from schedy.random import Choice, LogUniform, Constant, Normal
 
 if __name__ == '__main__':
-    db = SchedyDB('http://localhost:23456')
+    db = SchedyDB()
     exp = RandomSearch(
             'TestExperiment',
             {
