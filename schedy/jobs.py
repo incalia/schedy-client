@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 
 import json
-import requests
-from . import scalars
 from . import errors
 
-STATUS_RUNNING = 0
-STATUS_CRASHED = 1
-STATUS_DONE = 2
+STATUS_QUEUED = 'QUEUED'
+STATUS_RUNNING = 'RUNNING'
+STATUS_CRASHED = 'CRASHED'
+STATUS_DONE = 'DONE'
 
 def _check_status(status):
-    return status in (STATUS_RUNNING, STATUS_CRASHED, STATUS_DONE)
+    return status in (STATUS_QUEUED, STATUS_RUNNING, STATUS_CRASHED, STATUS_DONE)
 
 class Job(object):
-    def __init__(self, job_id, experiment, status, hyperparameters, results=None):
+    def __init__(self, job_id, experiment, status, hyperparameters, quality, results=None):
         self.job_id = job_id
         self.experiment = experiment
         self.status = status
         self.hyperparameters = hyperparameters
         self.results = results
+        self.quality = quality
 
     def __str__(self):
         return '{}(id={!r}, experiment={!r}, hyperparameters={!r})'.format(self.__class__.__name__, self.job_id, self.experiment.name, self.hyperparameters)
@@ -48,7 +48,8 @@ class Job(object):
         try:
             job_id = str(map_def['id'])
             experiment_name = str(map_def['experiment'])
-            status = int(map_def['status'])
+            status = str(map_def['status'])
+            quality = float(map_def['quality'])
             hyperparameters = map_def.get('hyperparameters')
             if hyperparameters is not None:
                 hyperparameters = dict(hyperparameters)
@@ -56,7 +57,7 @@ class Job(object):
                 hyperparameters = dict()
             results = map_def.get('results')
             if results is not None:
-                results = {key: scalars.scalar_from_map(val) for key, val in dict(results).items()}
+                results = dict(results)
             else:
                 results = dict()
         except (KeyError, ValueError) as e:
@@ -70,17 +71,30 @@ class Job(object):
                 experiment=experiment,
                 status=status,
                 hyperparameters=hyperparameters,
+                quality=quality,
                 results=results)
 
     def _to_map_definition(self):
         map_def = {
-                'id': self.job_id,
-                'experiment': self.experiment.name,
-                'status': self.status,
+                'id': str(self.job_id),
+                'experiment': str(self.experiment.name),
+                'status': str(self.status),
+                'quality': float(self.quality),
             }
         if len(self.hyperparameters) > 0:
             map_def['hyperparameters'] = self.hyperparameters
-        if len(self.results) > 0:
-            map_def['results'] = {key: scalars.scalar_to_map(val) for key, val in self.results.items()}
+        if self.results is not None and len(self.results) > 0:
+            map_def['results'] = self.results
         return map_def
+
+def _make_job(experiment, data):
+    try:
+        job_data = dict(data)
+    except ValueError as e:
+        raise errors.UnhandledResponseError('Excepting the description of a job as a dict, received type {}.'.format(type(data)), None) from e
+    try:
+        job = Job._from_map_definition(experiment, job_data)
+    except ValueError as e:
+        raise errors.UnhandledResponseError('Response contains an invalid job.', None) from e
+    return job
 

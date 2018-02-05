@@ -3,13 +3,18 @@
 import requests
 from urllib.parse import urljoin
 import json
+import functools
 
 from . import errors
 from .random import DISTRIBUTION_TYPES
-from .jobs import Job
+from .jobs import Job, _make_job
+from .pagination import PageObjectsIterator
 
-STATUS_RUNNING = 0
-STATUS_DONE = 1
+STATUS_RUNNING = 'RUNNING'
+STATUS_DONE = 'DONE'
+
+def _check_status(status):
+    return status in (STATUS_RUNNING, STATUS_DONE)
 
 class Experiment(object):
     def __init__(self, name, status):
@@ -27,39 +32,25 @@ class Experiment(object):
         try:
             content = dict(response.json())
         except ValueError as e:
-            raise errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None) from e
+            raise errors.UnhandledResponseError('Response contains invalid JSON dict:\n' + response.text, None) from e
         try:
             job = Job._from_map_definition(self, content)
         except ValueError as e:
-            raise errors.ServerError('Response contains an invalid experiment.', None) from e
+            raise errors.UnhandledResponseError('Response contains an invalid experiment.', None) from e
         return job
 
     def all_jobs(self):
         assert self._db is not None, 'Experiment was not added to a database'
         url = urljoin(self._db._experiment_url(self.name), 'jobs/')
-        response = self._db._authenticated_request('GET', url)
-        errors._handle_response_errors(response)
-        try:
-            content = list(response.json())
-        except ValueError as e:
-            raise errors.ServerError('Response contains invalid JSON list:\n' + response.text, None) from e
-        jobs = []
-        for job_data_raw in content:
-            try:
-                job_data = dict(job_data_raw)
-            except ValueError as e:
-                raise errors.ServerError('Excepting the description of a job as a dict, received type {}.'.format(type(job_data_raw)))
-            try:
-                job = Job._from_map_definition(self, job_data)
-            except ValueError as e:
-                raise errors.ServerError('Response contains an invalid job.', None) from e
-            jobs.append(job)
-        return jobs
+        return PageObjectsIterator(
+            reqfunc=functools.partial(self._db._authenticated_request, 'GET', url),
+            obj_creation_func=functools.partial(_make_job, self),
+        )
 
     def __str__(self):
         try:
             return '{}(name={!r}, params={})'.format(self.__class__.__name__, self.name, self._get_params())
-        except:
+        except NotImplementedError:
             return '{}(name={!r})'.format(self.__class__.__name__, self.name)
 
     def push_updates(self):
@@ -70,7 +61,7 @@ class Experiment(object):
         errors._handle_response_errors(response)
 
     @classmethod
-    def _create_from_params(cls, name, params):
+    def _create_from_params(cls, name, status, params):
         raise NotImplementedError()
 
     def _get_params(self):
@@ -84,19 +75,24 @@ class Experiment(object):
         return {
                 'name': self.name,
                 'status': self.status,
-                'scheduler': [scheduler, self._get_params()],
+                'scheduler': {scheduler: self._get_params()},
             }
 
     @staticmethod
     def _from_map_definition(schedulers, map_def):
         try:
             name = str(map_def['name'])
-            status = int(map_def['status'])
-            scheduler_def = list(map_def['scheduler'])
-            scheduler = str(scheduler_def[0])
-            params = dict(scheduler_def[1])
+            status = str(map_def['status'])
+            scheduler_def_map = dict(map_def['scheduler'])
+            if len(scheduler_def_map) != 1:
+                raise ValueError('Invalid scheduler definition: {}.'.format(scheduler_def_map))
+            sched_def_key, sched_def_val = next(iter(scheduler_def_map.items()))
+            scheduler = str(sched_def_key)
+            params = sched_def_val
         except (ValueError, KeyError) as e:
             raise ValueError('Invalid map definition for experiment.') from e
+        if not _check_status(status):
+            raise ValueError('Invalid or unknown status value: {}.'.format(status))
         try:
             exp_type = schedulers[scheduler]
         except KeyError as e:
@@ -135,4 +131,16 @@ class RandomSearch(Experiment):
 
     def _get_params(self):
         return {key: [dist.FUNC_NAME, dist.args()] for key, dist in self.distributions.items()}
+
+def _make_experiment(db, data):
+    try:
+        exp_data = dict(data)
+    except ValueError as e:
+        raise errors.UnhandledResponseError('Expected experience data as a dict, received {}.'.format(type(data)), None) from e
+    try:
+        exp = Experiment._from_map_definition(db._schedulers, exp_data)
+    except ValueError as e:
+        raise errors.UnhandledResponseError('Response contains an invalid experiment', None) from e
+    exp._db = db 
+    return exp
 

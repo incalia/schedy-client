@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from . import scalars
-
 class LogUniform(object):
     FUNC_NAME = 'loguniform'
 
@@ -52,7 +50,7 @@ class Choice(object):
 
     def args(self):
         args = {
-            'values': [scalars.scalar_to_map(val) for val in self.values],
+            'values': list(self.values),
         }
         if self.weights is not None:
             if len(self.weights) != len(self.values):
@@ -62,7 +60,7 @@ class Choice(object):
 
     @classmethod
     def from_args(cls, args):
-        values = [scalars.scalar_from_map(val) for val in args['values']]
+        values = list(args['values'])
         weights = None
         weights_val = args.get('weights')
         if weights_val != None:
@@ -95,11 +93,11 @@ class Constant(object):
         self.value = value
 
     def args(self):
-        return scalars.scalar_to_map(self.value)
+        return self.value
 
     @classmethod
     def from_args(cls, args):
-        val = scalars.scalar_from_map(args)
+        val = args
         return cls(val)
 
 DISTRIBUTION_TYPES = {cls.FUNC_NAME: cls for cls in (LogUniform, Uniform, Choice, Constant)}

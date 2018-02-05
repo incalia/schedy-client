@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from .experiments import Experiment, RandomSearch
+from .experiments import Experiment, RandomSearch, _make_experiment
 from .jwt import JWTTokenAuth
+from .pagination import PageObjectsIterator
 from . import errors
 
+import functools
 import json
 import requests
 import os.path
@@ -61,26 +63,10 @@ class SchedyDB(object):
         return exp
 
     def get_experiments(self):
-        url = self._all_experiments_url()
-        response = self._authenticated_request('GET', url)
-        errors._handle_response_errors(response)
-        try:
-            exp_data_list = list(response.json())
-        except ValueError as e:
-            raise errors.ServerError('Response contains invalid JSON list:\n' + response.text, None) from e
-        experiments = []
-        for exp_data_notype in exp_data_list:
-            try:
-                exp_data = dict(exp_data_notype)
-            except ValueError as e:
-                raise errors.ServerError('Expected experience data as a dict, received {}.'.format(type(exp_data)))
-            try:
-                exp = Experiment._from_map_definition(self._schedulers, exp_data)
-            except ValueError as e:
-                raise errors.ServerError('Response contains an invalid experiment', None) from e
-            exp._db = self
-            experiments.append(exp)
-        return experiments
+        return PageObjectsIterator(
+            reqfunc=functools.partial(self._authenticated_request, 'GET', self._all_experiments_url()),
+            obj_creation_func=functools.partial(_make_experiment, self),
+        )
 
     def register_scheduler(self, experiment_type):
         self._schedulers[experiment_type.SCHEDULER_NAME] = experiment_type
@@ -124,9 +110,8 @@ class SchedyDB(object):
         self.api_token = config['token']
 
     def _authenticated_request(self, *args, **kwargs):
-        retry_idx = 0
         response = None
-        for retry_idx in range(NUM_AUTH_RETRIES):
+        for _ in range(NUM_AUTH_RETRIES):
             if self._jwt_token is None or self._jwt_token.expires_soon():
                 self._authenticate()
             response = self._perform_request(*args, auth=self._jwt_token, **kwargs)
@@ -157,7 +142,8 @@ class SchedyDB(object):
         if self._session is None:
             self._make_session()
         if 'data' in kwargs:
-            logger.debug(kwargs['data'])
-        # In case we use sessions someday (would be good)
-        return self._session.request(*args, **kwargs)
+            logger.debug("Sent data: %s", kwargs['data'])
+        req = self._session.request(*args, **kwargs)
+        logger.debug("Received data: %s", req.text)
+        return req
 
