@@ -17,7 +17,7 @@ def _check_status(status):
     return status in (STATUS_RUNNING, STATUS_DONE)
 
 class Experiment(object):
-    def __init__(self, name, status):
+    def __init__(self, name, status=STATUS_RUNNING):
         self.name = name
         self.status = status
         self._db = None
@@ -102,6 +102,18 @@ class Experiment(object):
                 status=status,
                 params=params)
 
+class ManualSearch(Experiment):
+    SCHEDULER_NAME = 'Manual'
+
+    @classmethod
+    def _create_from_params(cls, name, status, params):
+        if params is not None:
+            raise ValueError('Expected not parameters for manual search, found {}.'.format(type(params)))
+        return cls(name=name, status=status)
+
+    def _get_params(self):
+        return None
+
 class RandomSearch(Experiment):
     SCHEDULER_NAME = 'RandomSearch'
 
@@ -116,10 +128,10 @@ class RandomSearch(Experiment):
         except AttributeError as e:
             raise ValueError('Expected parameters as a dict, found {}.'.format(type(params)))
         distributions = dict()
-        for key, arr_def in items:
+        for key, dist_def in items:
             try:
-                dist_name = str(arr_def[0])
-                dist_args = dict(arr_def[1])
+                dist_name_raw, dist_args = next(iter(dist_def.items()))
+                dist_name = str(dist_name_raw)
             except (KeyError, TypeError) as e:
                 raise ValueError('Invalid distribution definition.') from e
             try:
@@ -130,7 +142,7 @@ class RandomSearch(Experiment):
         return cls(name=name, distributions=distributions, status=status)
 
     def _get_params(self):
-        return {key: [dist.FUNC_NAME, dist.args()] for key, dist in self.distributions.items()}
+        return {key: {dist.FUNC_NAME: dist.args()} for key, dist in self.distributions.items()}
 
 def _make_experiment(db, data):
     try:

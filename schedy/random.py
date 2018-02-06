@@ -22,6 +22,12 @@ class LogUniform(object):
         highexp = float(args['highExp'])
         return cls(base, lowexp, highexp)
 
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+            self.base == other.base and \
+            self.lowexp == other.lowexp and \
+            self.highexp == other.highexp
+
 class Uniform(object):
     FUNC_NAME = 'uniform'
 
@@ -40,6 +46,11 @@ class Uniform(object):
         low = float(args['low'])
         high = float(args['high'])
         return cls(low, high)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+            self.low == other.low and \
+            self.high == other.high
 
 class Choice(object):
     FUNC_NAME = 'choice'
@@ -67,6 +78,11 @@ class Choice(object):
             weights = [float(w) for w in weights_val]
         return cls(values, weights)
 
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+            self.values == other.values and \
+            self.weights == other.weights
+
 class Normal(object):
     FUNC_NAME = 'normal'
 
@@ -86,6 +102,11 @@ class Normal(object):
         std = float(args['std'])
         return cls(mean, std)
 
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+            self.mean == other.mean and \
+            self.std == other.std
+
 class Constant(object):
     FUNC_NAME = 'const'
 
@@ -100,4 +121,8 @@ class Constant(object):
         val = args
         return cls(val)
 
-DISTRIBUTION_TYPES = {cls.FUNC_NAME: cls for cls in (LogUniform, Uniform, Choice, Constant)}
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+            self.value == other.value
+
+DISTRIBUTION_TYPES = {cls.FUNC_NAME: cls for cls in (LogUniform, Uniform, Choice, Normal, Constant)}

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .experiments import Experiment, RandomSearch, _make_experiment
+from .experiments import Experiment, RandomSearch, ManualSearch, _make_experiment
 from .jwt import JWTTokenAuth
 from .pagination import PageObjectsIterator
 from . import errors
@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 NUM_AUTH_RETRIES = 2
 
-def _default_config_dir():
-    return os.path.join(os.path.expanduser('~'), '.schedy')
+def _default_config_path():
+    return os.path.join(os.path.expanduser('~'), '.schedy', 'client.json')
 
 class SchedyDB(object):
-    def __init__(self, config_dir=None):
-        self._load_config(config_dir)
+    def __init__(self, config_path=None):
+        self._load_config(config_path)
         # Add the trailing slash if it's not there
         if len(self.root) == 0 or self.root[-1] != '/':
             self.root = self.root + '/'
@@ -34,6 +34,23 @@ class SchedyDB(object):
         self._jwt_token = None
         self._jwt_expiration = datetime.datetime(year=1970, month=1, day=1)
         self._session = None
+
+    def authenticate(self):
+        logger.debug('Renewing authentication')
+        url = urljoin(self.root, 'token/')
+        response = self._perform_request('POST', url, json={'email': self.email, 'token': self.api_token})
+        errors._handle_response_errors(response)
+        try:
+            token_data = response.json()
+        except ValueError as e:
+            raise errors.ServerError('Response contains invalid JSON:\n' + response.text, None) from e
+        try:
+            jwt_token = token_data['token']
+            expires_at = datetime.datetime.fromtimestamp(token_data['expiresAt'])
+        except (KeyError, OverflowError, OSError) as e:
+            raise errors.ServerError('Response contains invalid token data.', None) from e
+        self._jwt_token = JWTTokenAuth(jwt_token, expires_at)
+        logger.debug('A new token was obtained.')
 
     def add_experiment(self, exp):
         url = self._experiment_url(exp.name)
@@ -73,23 +90,7 @@ class SchedyDB(object):
 
     def _register_default_schedulers(self):
         self.register_scheduler(RandomSearch)
-
-    def _authenticate(self):
-        logger.debug('Renewing authentication')
-        url = urljoin(self.root, 'token/')
-        response = self._perform_request('POST', url, json={'email': self.email, 'token': self.api_token})
-        errors._handle_response_errors(response)
-        try:
-            token_data = response.json()
-        except ValueError as e:
-            raise errors.ServerError('Response contains invalid JSON:\n' + response.text, None) from e
-        try:
-            jwt_token = token_data['token']
-            expires_at = datetime.datetime.fromtimestamp(token_data['expiresAt'])
-        except (KeyError, OverflowError, OSError) as e:
-            raise errors.ServerError('Response contains invalid token data.', None) from e
-        self._jwt_token = JWTTokenAuth(jwt_token, expires_at)
-        logger.debug('A new token was obtained.')
+        self.register_scheduler(ManualSearch)
 
     def _all_experiments_url(self):
         return urljoin(self.root, 'experiments/')
@@ -100,10 +101,10 @@ class SchedyDB(object):
     def _job_url(self, experiment, job):
         return urljoin(self.root, 'experiments/{}/jobs/{}/'.format(experiment, job))
 
-    def _load_config(self, config_dir):
-        if config_dir is None:
-            config_dir = _default_config_dir()
-        with open(os.path.join(config_dir, 'client.json')) as f:
+    def _load_config(self, config_path):
+        if config_path is None:
+            config_path = _default_config_path()
+        with open(config_path) as f:
             config = json.load(f)
         self.root = config.get('root', 'https://schedy.io/api/')
         self.email = config['email']
@@ -113,9 +114,9 @@ class SchedyDB(object):
         response = None
         for _ in range(NUM_AUTH_RETRIES):
             if self._jwt_token is None or self._jwt_token.expires_soon():
-                self._authenticate()
+                self.authenticate()
             response = self._perform_request(*args, auth=self._jwt_token, **kwargs)
-            if response.status_code != requests.codes.forbidden:
+            if response.status_code != requests.codes.unauthorized:
                 break
         return response
 

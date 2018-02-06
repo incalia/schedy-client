@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import requests
+
 class SchedyError(Exception):
     pass
 
@@ -22,6 +24,12 @@ class HTTPError(SchedyError):
 class ClientError(HTTPError):
     pass
 
+class AuthenticationError(ClientError):
+    pass
+
+class ReauthenticateError(ClientError):
+    pass
+
 class ClientRequestError(ClientError):
     pass
 
@@ -41,6 +49,10 @@ def _handle_response_errors(response):
     code = response.status_code
     if code in [200, 201, 204]:
         return
+    if code == requests.codes.forbidden:
+        raise AuthenticationError(response.text, code)
+    if code == requests.codes.unauthorized:
+        raise ReauthenticateError(response.text, code)
     if code in range(400, 500):
         raise ClientRequestError(response.text, code)
     if code in range(500, 600):
