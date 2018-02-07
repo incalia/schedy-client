@@ -143,8 +143,10 @@ class SchedyDB(object):
         if self._session is None:
             self._make_session()
         if 'data' in kwargs:
-            logger.debug("Sent data: %s", kwargs['data'])
+            logger.debug('Sent headers: %s', kwargs.get('headers'))
+            logger.debug('Sent data: %s', kwargs['data'])
         req = self._session.request(*args, **kwargs)
-        logger.debug("Received data: %s", req.text)
+        logger.debug('Received headers: %s', req.headers)
+        logger.debug('Received data: %s', req.text)
         return req
 

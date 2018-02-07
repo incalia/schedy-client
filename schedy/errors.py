@@ -24,16 +24,19 @@ class HTTPError(SchedyError):
 class ClientError(HTTPError):
     pass
 
-class AuthenticationError(ClientError):
-    pass
-
-class ReauthenticateError(ClientError):
-    pass
-
 class ClientRequestError(ClientError):
     pass
 
+class AuthenticationError(ClientRequestError):
+    pass
+
+class ReauthenticateError(ClientRequestError):
+    pass
+
 class ResourceExistsError(ClientRequestError):
+    pass
+
+class UnsafeUpdateError(ClientRequestError):
     pass
 
 class NoJobError(ClientRequestError):

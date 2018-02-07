@@ -7,7 +7,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 if __name__ == '__main__':
-    db = SchedyDB()
+    db = SchedyDB('integ_tests/client.json')
     for exp in db.get_experiments():
         print(exp)
         for job in exp.all_jobs():

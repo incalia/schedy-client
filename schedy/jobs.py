@@ -3,48 +3,62 @@
 import json
 from . import errors
 
-STATUS_QUEUED = 'QUEUED'
-STATUS_RUNNING = 'RUNNING'
-STATUS_CRASHED = 'CRASHED'
-STATUS_DONE = 'DONE'
+JOB_QUEUED = 'QUEUED'
+JOB_RUNNING = 'RUNNING'
+JOB_CRASHED = 'CRASHED'
+JOB_DONE = 'DONE'
 
 def _check_status(status):
-    return status in (STATUS_QUEUED, STATUS_RUNNING, STATUS_CRASHED, STATUS_DONE)
+    return status in (JOB_QUEUED, JOB_RUNNING, JOB_CRASHED, JOB_DONE)
 
 class Job(object):
-    def __init__(self, job_id, experiment, status, hyperparameters, quality, results=None):
+    def __init__(self, job_id, experiment, hyperparameters, status=JOB_QUEUED, quality=0, results=None, etag=None):
         self.job_id = job_id
         self.experiment = experiment
         self.status = status
         self.hyperparameters = hyperparameters
         self.results = results
         self.quality = quality
+        self.etag = etag
 
     def __str__(self):
         return '{}(id={!r}, experiment={!r}, hyperparameters={!r})'.format(self.__class__.__name__, self.job_id, self.experiment.name, self.hyperparameters)
 
-    def put(self):
-        db = self.experiment._db
-        url = db._job_url(self.experiment.name, self.job_id)
-        map_def = self._to_map_definition()
-        data = json.dumps(map_def)
-        response = db._authenticated_request('PUT', url, data=data)
-        errors._handle_response_errors(response)
-
     def __enter__(self):
-        self.status = STATUS_RUNNING
-        self.put()
+        if self.status != JOB_RUNNING:
+            try_run()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
-            self.status = STATUS_CRASHED
+            self.status = JOB_CRASHED
         else:
-            self.status = STATUS_DONE
+            self.status = JOB_DONE
+        self.put()
+
+    def put(self, safe=True):
+        db = self.experiment._db
+        url = db._job_url(self.experiment.name, self.job_id)
+        map_def = self._to_map_definition()
+        data = json.dumps(map_def)
+        headers = dict()
+        if safe:
+            if self.etag is None:
+                headers['If-None-Match'] = '*'
+            else:
+                headers['If-Match'] = self.etag
+        response = db._authenticated_request('PUT', url, data=data, headers=headers)
+        errors._handle_response_errors(response)
+        etag = response.headers.get('ETag')
+        if etag is not None:
+            self.etag = etag
+
+    def try_run(self):
+        self.status = JOB_RUNNING
         self.put()
 
     @classmethod
-    def _from_map_definition(cls, experiment, map_def):
+    def _from_map_definition(cls, experiment, map_def, etag=None):
         try:
             job_id = str(map_def['id'])
             experiment_name = str(map_def['experiment'])
@@ -72,12 +86,11 @@ class Job(object):
                 status=status,
                 hyperparameters=hyperparameters,
                 quality=quality,
-                results=results)
+                results=results,
+                etag=etag)
 
     def _to_map_definition(self):
         map_def = {
-                'id': str(self.job_id),
-                'experiment': str(self.experiment.name),
                 'status': str(self.status),
                 'quality': float(self.quality),
             }
@@ -87,14 +100,21 @@ class Job(object):
             map_def['results'] = self.results
         return map_def
 
-def _make_job(experiment, data):
+def _make_job(experiment, data, etag=None):
     try:
         job_data = dict(data)
     except ValueError as e:
         raise errors.UnhandledResponseError('Excepting the description of a job as a dict, received type {}.'.format(type(data)), None) from e
     try:
-        job = Job._from_map_definition(experiment, job_data)
+        job = Job._from_map_definition(experiment, job_data, etag)
     except ValueError as e:
         raise errors.UnhandledResponseError('Response contains an invalid job.', None) from e
     return job
+
+def _job_from_response(experiment, response):
+    try:
+        content = response.json()
+    except ValueError as e:
+        raise errors.UnhandledResponseError('Response contains invalid JSON:\n' + response.text, None) from e
+    return _make_job(experiment, content, response.headers.get('ETag'))
 

@@ -2,4 +2,5 @@
 
 from .core import *
 from .experiments import *
+from .jobs import *
 

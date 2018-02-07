@@ -4,44 +4,62 @@ import requests
 from urllib.parse import urljoin
 import json
 import functools
+import logging
 
 from . import errors
 from .random import DISTRIBUTION_TYPES
-from .jobs import Job, _make_job
+from .jobs import Job, _make_job, _job_from_response
 from .pagination import PageObjectsIterator
 
-STATUS_RUNNING = 'RUNNING'
-STATUS_DONE = 'DONE'
+logger = logging.getLogger(__name__)
+
+EXPERIMENT_RUNNING = 'RUNNING'
+EXPERIMENT_DONE = 'DONE'
 
 def _check_status(status):
-    return status in (STATUS_RUNNING, STATUS_DONE)
+    return status in (EXPERIMENT_RUNNING, EXPERIMENT_DONE)
 
 class Experiment(object):
-    def __init__(self, name, status=STATUS_RUNNING):
+    def __init__(self, name, status=EXPERIMENT_RUNNING):
         self.name = name
         self.status = status
         self._db = None
 
+    def add_job(self, **kwargs):
+        partial_job = Job(
+                job_id=None,
+                experiment=None,
+                **kwargs)
+        assert self._db is not None, 'Experiment was not added to a database'
+        url = self._jobs_url()
+        map_def = partial_job._to_map_definition()
+        data = json.dumps(map_def)
+        response = self._db._authenticated_request('POST', url, data=data)
+        errors._handle_response_errors(response)
+        return _job_from_response(self, response)
+
     def next_job(self):
         assert self._db is not None, 'Experiment was not added to a database'
         url = urljoin(self._db._experiment_url(self.name), 'nextjob/')
-        response = self._db._authenticated_request('GET', url)
-        if response.status_code == requests.codes.no_content:
-            raise errors.NoJobError('No job left for experiment {}.'.format(self.name), None)
-        errors._handle_response_errors(response)
-        try:
-            content = dict(response.json())
-        except ValueError as e:
-            raise errors.UnhandledResponseError('Response contains invalid JSON dict:\n' + response.text, None) from e
-        try:
-            job = Job._from_map_definition(self, content)
-        except ValueError as e:
-            raise errors.UnhandledResponseError('Response contains an invalid experiment.', None) from e
+        job = None
+        # Try obtaining a job and running it until we manage to get hold of a
+        # job we can indeed run (concurrent trials to run a job can cause us to
+        # fail, so try and try again)
+        while job is None:
+            response = self._db._authenticated_request('GET', url)
+            if response.status_code == requests.codes.no_content:
+                raise errors.NoJobError('No job left for experiment {}.'.format(self.name), None)
+            errors._handle_response_errors(response)
+            job = _job_from_response(self, response)
+            try:
+                job.try_run()
+            except errors.UnsafeUpdateError:
+                logger.debug('Two workers tried to start working on the same job, retrying.', exc_info=True)
         return job
 
     def all_jobs(self):
         assert self._db is not None, 'Experiment was not added to a database'
-        url = urljoin(self._db._experiment_url(self.name), 'jobs/')
+        url = self._jobs_url()
         return PageObjectsIterator(
             reqfunc=functools.partial(self._db._authenticated_request, 'GET', url),
             obj_creation_func=functools.partial(_make_job, self),
@@ -73,7 +91,6 @@ class Experiment(object):
         except AttributeError as e:
             raise AttributeError('Experiment implementations should define a SCHEDULER_NAME attribute') from e
         return {
-                'name': self.name,
                 'status': self.status,
                 'scheduler': {scheduler: self._get_params()},
             }
@@ -102,13 +119,16 @@ class Experiment(object):
                 status=status,
                 params=params)
 
+    def _jobs_url(self):
+        return urljoin(self._db._experiment_url(self.name), 'jobs/')
+
 class ManualSearch(Experiment):
     SCHEDULER_NAME = 'Manual'
 
     @classmethod
     def _create_from_params(cls, name, status, params):
         if params is not None:
-            raise ValueError('Expected not parameters for manual search, found {}.'.format(type(params)))
+            raise ValueError('Expected no parameters for manual search, found {}.'.format(type(params)))
         return cls(name=name, status=status)
 
     def _get_params(self):
@@ -117,7 +137,7 @@ class ManualSearch(Experiment):
 class RandomSearch(Experiment):
     SCHEDULER_NAME = 'RandomSearch'
 
-    def __init__(self, name, distributions, status=STATUS_RUNNING):
+    def __init__(self, name, distributions, status=EXPERIMENT_RUNNING):
         super().__init__(name, status)
         self.distributions = distributions
 
