@@ -65,32 +65,32 @@ def setup_show(subparsers):
     parser.set_defaults(func=cmd_show)
     parser.add_argument('experiment', help='Name for the new experiment.')
 
-def print_exp(exp):
-    print('Name: {}'.format(exp.name))
-    print('Status: {}'.format(exp.status))
-    print('Scheduler: {}'.format(exp.SCHEDULER_NAME))
-    if isinstance(exp, schedy.RandomSearch):
-        print('Distributions:')
-        for name, dist in exp.distributions.items():
-            print(' - {}: {} ({})'.format(name, dist.FUNC_NAME, json.dumps(dist.args())))
-
-
 def cmd_show(db, args):
     exp = db.get_experiment(args.experiment)
     print_exp(exp)
 
 def setup_list(subparsers):
-    parser = subparsers.add_parser('list', help='List all experiments.')
+    parser = subparsers.add_parser('list', help='List experiments/jobs (by default, lists all experiments).')
     parser.set_defaults(func=cmd_list)
+    parser.add_argument('experiment', nargs='?', help='Name of the experiment whose jobs will be listed.')
     parser.add_argument('-l', '--long', action='store_true', help='Long description for each experiment.')
 
 def cmd_list(db, args):
-    for exp in db.get_experiments():
-        if args.long:
-            print_exp(exp)
-            print()
-        else:
-            print(exp.name)
+    if args.experiment is None:
+        for exp in db.get_experiments():
+            if args.long:
+                print_exp(exp)
+                print()
+            else:
+                print(exp.name)
+    else:
+        exp = db.get_experiment(args.experiment)
+        for job in exp.all_jobs():
+            if args.long:
+                print_job(job)
+                print()
+            else:
+                print(job.name)
 
 def setup_push(subparsers):
     parser = subparsers.add_parser('push', help='Manually add a job to an existing experiment.')
@@ -114,6 +114,27 @@ def main():
     args = parser.parse_args()
     db = schedy.SchedyDB(config_path=args.config)
     args.func(db, args)
+
+def print_exp(exp):
+    print('Name: {}'.format(exp.name))
+    print('Status: {}'.format(exp.status))
+    print('Scheduler: {}'.format(exp.SCHEDULER_NAME))
+    if isinstance(exp, schedy.RandomSearch):
+        print('Distributions:')
+        for name, dist in exp.distributions.items():
+            print(' - {}: {} ({})'.format(name, dist.FUNC_NAME, json.dumps(dist.args())))
+
+def print_job(job):
+    print('Id: {}'.format(job.job_id))
+    print('Status: {}'.format(job.status))
+    print('Quality: {}'.format(job.quality))
+    print('Hyperparameters:')
+    for name, value in job.hyperparameters.items():
+        print(' - {}: {}'.format(name, json.dumps(value)))
+    if job.results is not None and len(job.results) > 0:
+        print('Results:')
+        for name, value in job.results.items():
+            print(' - {}: {}'.format(name, json.dumps(value)))
 
 if __name__ == '__main__':
     main()
