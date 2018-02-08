@@ -61,13 +61,18 @@ def cmd_rm(db, args):
     args.errparser.error('Not implemented')
 
 def setup_show(subparsers):
-    parser = subparsers.add_parser('show', help='Show an experiment.')
+    parser = subparsers.add_parser('show', help='Show an experiment/a job.')
     parser.set_defaults(func=cmd_show)
     parser.add_argument('experiment', help='Name for the new experiment.')
+    parser.add_argument('job', nargs='?', help='Name of the job.')
 
 def cmd_show(db, args):
     exp = db.get_experiment(args.experiment)
-    print_exp(exp)
+    if args.job is None:
+        print_exp(exp)
+    else:
+        job = exp.get_job(args.job)
+        print_job(job)
 
 def setup_list(subparsers):
     parser = subparsers.add_parser('list', help='List experiments/jobs (by default, lists all experiments).')
@@ -90,16 +95,56 @@ def cmd_list(db, args):
                 print_job(job)
                 print()
             else:
-                print(job.name)
+                print(job.job_id)
 
 def setup_push(subparsers):
     parser = subparsers.add_parser('push', help='Manually add a job to an existing experiment.')
     parser.set_defaults(func=cmd_push)
-    # Temporary
-    parser.set_defaults(errparser=parser)
+    parser.add_argument('experiment', help='Name of the experiment for the job.')
+    parser.add_argument('-s', '--status', choices=(schedy.JOB_QUEUED, schedy.JOB_RUNNING, schedy.JOB_DONE, schedy.JOB_CRASHED), help='Status of the job.')
+    parser.add_argument('-q', '--quality', type=float, help='Quality of the solution found by the job.')
+    parser.add_argument('-r', '--results', nargs='+', help='Optional results for the job. Each result must be provided as a pair: name value. value must be a valid JSON value. For example: -r accuracy 0.9 loss_history \'[0.9, 0.8, 0.7]\'')
+    parser.add_argument('-p', '--hyperparameters', nargs='+', required=True, help='Hyperparameters for the job. Each hyperparameter must be provided as a pair: name value. value must be a valid JSON value. For example: -p learning_rate 0.01 num_layers 3 size_layers \'[512, 1024, 512]\'')
+    parser.set_defaults(parser=parser)
 
 def cmd_push(db, args):
-    args.errparser.error('Not implemented')
+    kwargs = dict()
+    # Status, quality
+    if args.status is not None:
+        kwargs['status'] = args.status
+    if args.quality is not None:
+        kwargs['quality'] = args.quality
+    # Results
+    if args.results is not None:
+        if len(args.results) % 2 != 0:
+            args.parser.error('Invalid results (not a list of name/value).')
+        results = dict()
+        for i in range(0, len(args.results), 2):
+            name = args.results[i]
+            value_txt = args.results[i + 1]
+            if name in results:
+                args.parser.error('Duplicate result: {}.'.format(name))
+            try:
+                results[name] = json.loads(value_txt)
+            except (TypeError, ValueError) as e:
+                args.parser.error('Invalid value for result {} ({!r}).'.format(name, e))
+        kwargs['results'] = results
+    # Hyperparameters
+    if len(args.hyperparameters) % 2 != 0:
+        args.parser.error('Invalid hyperparameters (not a list of name/value).')
+    hyperparameters = dict()
+    for i in range(0, len(args.hyperparameters), 2):
+        name = args.hyperparameters[i]
+        value_txt = args.hyperparameters[i + 1]
+        if name in hyperparameters:
+            args.parser.error('Duplicate hyperparameter: {}.'.format(name))
+        try:
+            hyperparameters[name] = json.loads(value_txt)
+        except (TypeError, ValueError) as e:
+            args.parser.error('Invalid value for hyperparameter {} ({!r}).'.format(name, e))
+    kwargs['hyperparameters'] = hyperparameters
+    exp = db.get_experiment(args.experiment)
+    exp.add_job(**kwargs)
 
 def main():
     parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')

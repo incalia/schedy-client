@@ -65,6 +65,14 @@ class Experiment(object):
             obj_creation_func=functools.partial(_make_job, self),
         )
 
+    def get_job(self, job_id):
+        assert self._db is not None, 'Experiment was not added to a database'
+        url = self._db._job_url(self.name, job_id)
+        response = self._db._authenticated_request('GET', url)
+        errors._handle_response_errors(response)
+        job = _job_from_response(self, response)
+        return job
+
     def __str__(self):
         try:
             return '{}(name={!r}, params={})'.format(self.__class__.__name__, self.name, self._get_params())
