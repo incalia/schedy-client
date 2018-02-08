@@ -52,13 +52,31 @@ def cmd_add(db, args):
     db.add_experiment(exp)
 
 def setup_rm(subparsers):
-    parser = subparsers.add_parser('rm', help='Remove an experiment.')
+    parser = subparsers.add_parser('rm', help='Remove an experiment or a job.')
     parser.set_defaults(func=cmd_rm)
-    # Temporary
-    parser.set_defaults(errparser=parser)
+    parser.add_argument('experiment', help='Name of the experiment.')
+    parser.add_argument('job', nargs='?', help='Name of the job.')
+    parser.add_argument('-f', '--force', action='store_true', help='Don\'t ask for confirmation.')
 
 def cmd_rm(db, args):
-    args.errparser.error('Not implemented')
+    exp = db.get_experiment(args.experiment)
+    if args.job is None:
+        if not args.force:
+            print_exp(exp)
+            confirmation = input('Are you sure you want to remove {} and all its jobs? [y/N] '.format(exp.name))
+            if confirmation.lower() != 'y':
+                print('{} was not removed.'.format(exp.name))
+                return
+        exp.delete()
+    else:
+        job = exp.get_job(args.job)
+        if not args.force:
+            print_job(job)
+            confirmation = input('Are you sure you want to remove {}? [y/N] '.format(job.job_id))
+            if confirmation.lower() != 'y':
+                print('{} was not removed.'.format(job.job_id))
+                return
+        job.delete()
 
 def setup_show(subparsers):
     parser = subparsers.add_parser('show', help='Show an experiment/a job.')

@@ -80,10 +80,21 @@ class Experiment(object):
             return '{}(name={!r})'.format(self.__class__.__name__, self.name)
 
     def push_updates(self):
+        assert self._db is not None, 'Experiment was not added to a database'
         url = self._db._experiment_url(self.name)
         content = self._to_map_definition()
         data = json.dumps(content)
-        response = self._db._perform_request('PUT', url, data=data)
+        response = self._db._authenticated_request('PUT', url, data=data)
+        errors._handle_response_errors(response)
+
+    def delete(self, ensure=True):
+        assert self._db is not None, 'Experiment was not added to a database'
+        url = self._db._experiment_url(self.name)
+        if ensure:
+            headers = {'If-Match': '*'}
+        else:
+            headers = dict()
+        response = self._db._authenticated_request('DELETE', url, headers=headers)
         errors._handle_response_errors(response)
 
     @classmethod

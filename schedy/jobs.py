@@ -57,6 +57,16 @@ class Job(object):
         self.status = JOB_RUNNING
         self.put()
 
+    def delete(self, ensure=True):
+        db = self.experiment._db
+        url = db._job_url(self.experiment.name, self.job_id)
+        if ensure:
+            headers = {'If-Match': '*'}
+        else:
+            headers = dict()
+        response = db._authenticated_request('DELETE', url, headers=headers)
+        errors._handle_response_errors(response)
+
     @classmethod
     def _from_map_definition(cls, experiment, map_def, etag=None):
         try:
