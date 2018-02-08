@@ -144,7 +144,8 @@ def cmd_push(db, args):
             args.parser.error('Invalid value for hyperparameter {} ({!r}).'.format(name, e))
     kwargs['hyperparameters'] = hyperparameters
     exp = db.get_experiment(args.experiment)
-    exp.add_job(**kwargs)
+    job = exp.add_job(**kwargs)
+    print_job(job)
 
 def main():
     parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')
