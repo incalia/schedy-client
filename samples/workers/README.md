@@ -78,7 +78,8 @@ background, on the nodes of your cluster... You might notice it start by
 printing errors like this one:
 
 > HTTP Error None:
-> > No job left for experiment MinimizeManual.
+>
+> \> No job left for experiment MinimizeManual.
 
 This is normal and fine, as you do not have enqueued any job to your experiment
 yet. You can keep the script running, as it will detect the new job as soon as
