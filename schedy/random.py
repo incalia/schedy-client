@@ -17,7 +17,7 @@ class LogUniform(object):
     def from_args(cls, args):
         low = float(args['low'])
         high = float(args['high'])
-        return cls(base, low, high)
+        return cls(low, high)
 
     def __eq__(self, other):
         return type(self) == type(other) and \
