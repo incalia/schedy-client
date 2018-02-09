@@ -11,11 +11,11 @@ that minimize `x^2 * y^2`. First, you would create an experiment in Schedy:
 schedy add MinimizeSimple manual
 ```
 
-This create a new experience called *MinimizeSimple*. The keyword *manual*
+This creates a new experience called *MinimizeSimple*. The keyword *manual*
 tells Schedy that you are going to manage the jobs of this experiment yourself.
 More on that later.
 
-Now, you try many values of `x` and `y` to find which one works the best. If
+Now, let's try many values of `x` and `y` to find which one works the best. If
 you do it by hand, you can record all your results in Schedy by creating new
 jobs. For each job, tell Schedy which parameters you tried, and what result you
 obtained.
@@ -86,7 +86,7 @@ Results:
 ...
 ```
 
-We are pretty far from the optimal result, but that's pretty normal considering
+We are pretty far from the optimal result, but that's normal considering
 we were trying values of `x` and `y` at random.
 
 You might be wondering:
@@ -95,3 +95,15 @@ You might be wondering:
 > worst?
 
 TODO
+
+Once you are done, you can remove the experiment, so that it does not appear in
+your listings later, as this is just an experiment for the tutorial.
+
+```python
+schedy rm MinimizeSimple
+# You could also remove a single job using:
+schedy rm MinimizeSimple <job-id>
+```
+
+However, do not hesitate to keep your real experiments in the database, if you
+want to keep track of them. You don't have to remove them if you don't want to!
