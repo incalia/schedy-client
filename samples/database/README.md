@@ -107,3 +107,5 @@ schedy rm MinimizeSimple <job-id>
 
 However, do not hesitate to keep your real experiments in the database, if you
 want to keep track of them. You don't have to remove them if you don't want to!
+
+Next tutorial: [Schedy as a scheduler](../workers/README.md)

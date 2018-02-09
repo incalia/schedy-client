@@ -74,14 +74,14 @@ If something failed, print what went wrong and wait a minute before retrying.
 If everything was fine, pull the next job immediately.
 
 You can run the worker (i.e. this script) in another terminal, in the
-background, on the nodes of your cluster... You might notice it start by
+background, on the nodes of your cluster... You might notice it starts by
 printing errors like this one:
 
 > HTTP Error None:
 >
 > \> No job left for experiment MinimizeManual.
 
-This is normal and fine, as you do not have enqueued any job to your experiment
+This is fine, as you do not have enqueued any job to your experiment
 yet. You can keep the script running, as it will detect the new job as soon as
 we enqueue it (or in the worst-case scenario, 60 seconds after that).
 
@@ -125,4 +125,6 @@ Schedy will always make sure that only one worker will work on a given job
 > But do I always have to push my jobs by hand? What if I want to do a
 > systematic search (e.g. random search)?
 
-Don't worry we've got you covered.
+Don't worry we've got you covered. Just go to the next tutorial!
+
+Next tutorial: [Random search](../random_search/README.md)
