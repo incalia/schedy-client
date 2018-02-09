@@ -3,30 +3,26 @@
 class LogUniform(object):
     FUNC_NAME = 'loguniform'
 
-    def __init__(self, base, lowexp, highexp):
-        self.base = base
-        self.lowexp = lowexp
-        self.highexp = highexp
+    def __init__(self, low, high):
+        self.low = low
+        self.high = high
 
     def args(self):
         return {
-            'base': float(self.base),
-            'lowExp': float(self.lowexp),
-            'highExp': float(self.highexp),
+            'low': float(self.low),
+            'high': float(self.high),
         }
 
     @classmethod
     def from_args(cls, args):
-        base = float(args['base'])
-        lowexp = float(args['lowExp'])
-        highexp = float(args['highExp'])
-        return cls(base, lowexp, highexp)
+        low = float(args['low'])
+        high = float(args['high'])
+        return cls(base, low, high)
 
     def __eq__(self, other):
         return type(self) == type(other) and \
-            self.base == other.base and \
-            self.lowexp == other.lowexp and \
-            self.highexp == other.highexp
+            self.low == other.low and \
+            self.high == other.high
 
 class Uniform(object):
     FUNC_NAME = 'uniform'
