@@ -104,6 +104,7 @@ def setup_list(subparsers):
     parser.add_argument('-p', '--paragraph', action='store_true', help='Long description, as a series of paragraphs.')
     parser.add_argument('-s', '--sort', action='append', help='Field by which we should sort. You can specify multiple fields using this argument multiple times.')
     parser.add_argument('-d', '--decreasing', action='store_true', help='Sort in reverse order (decreasing values).')
+    parser.add_argument('-f', '--field', action='append', help='Specify this option multiple times to select the fields you want to diply (all by default).')
 
 def cmd_list(db, args):
     if args.experiment is None:
@@ -118,12 +119,16 @@ def cmd_list(db, args):
             table.sort(args.sort, reverse=args.decreasing)
         except KeyError as e:
             args.parser.error(str(e))
+    if args.field is not None:
+        table.filter_fields(args.field)
     if args.table:
         table.print_table()
     elif args.paragraph:
         table.print_paragraphs()
     else:
-        table.print_category(DEFAULT_CATEGORY)
+        if args.field is None:
+            table.filter_categories([DEFAULT_CATEGORY])
+        table.print_table('plain', include_headers=False)
 
 def setup_push(subparsers):
     parser = subparsers.add_parser('push', help='Manually add a job to an existing experiment.')
@@ -192,16 +197,15 @@ def main():
 class TableData(object):
     def __init__(self):
         self.headers = list()
-        self.headers_idx = dict()
         self.rows = list()
 
     def add_row(self, data):
         row = [None] * len(self.headers)
         for key, value in data.items():
-            assert isinstance(key, tuple) and len(key) == 2 and isinstance(key[0], str) and isinstance(key[1], str), 'Invalid row key'
-            nfound = len(self.headers)
-            idx = self.headers_idx.setdefault(key, nfound)
-            if idx == nfound:
+            try:
+                idx = self.headers.index(key)
+            except ValueError:
+                idx = len(self.headers)
                 self.headers.append(key)
             if idx >= len(row):
                 row.extend([None] * (idx - len(row) + 1))
@@ -231,7 +235,7 @@ class TableData(object):
                 names.append(name)
         return names
 
-    def sort(self, fields, reverse=False):
+    def _get_fields_indices(self, fields):
         indices = []
         for field in fields:
             try:
@@ -240,7 +244,15 @@ class TableData(object):
                 try:
                     indices.append(self.header_names(explicit=False).index(field))
                 except ValueError:
-                    raise KeyError('Sort field "{}" not found or ambiguous.'.format(field))
+                    raise KeyError('Field "{}" not found or ambiguous.'.format(field))
+        return indices
+
+    def _filter_columns(self, indices):
+        self.rows = [[row[idx] if idx < len(row) else None for idx in indices] for row in self.rows]
+        self.headers = [self.headers[idx] for idx in indices]
+
+    def sort(self, fields, reverse=False):
+        indices = self._get_fields_indices(fields)
         def key_func(row):
             key = tuple()
             for idx in indices:
@@ -256,8 +268,19 @@ class TableData(object):
             return key
         self.rows = sorted(self.rows, key=key_func, reverse=reverse)
 
-    def print_table(self):
-        print(tabulate(self.rows, self.header_names(), tablefmt='psql'))
+    def filter_categories(self, categories):
+        fields_idx = [idx for idx, (cat, _) in enumerate(self.headers) if cat in categories]
+        self._filter_columns(fields_idx)
+
+    def filter_fields(self, fields):
+        indices = self._get_fields_indices(fields)
+        self._filter_columns(indices)
+
+    def print_table(self, fmt='psql', include_headers=True):
+        if include_headers:
+            print(tabulate(self.rows, self.header_names(), tablefmt=fmt))
+        else:
+            print(tabulate(self.rows, tablefmt=fmt))
 
 def exp_table(experiments):
     data = TableData()
