@@ -276,6 +276,16 @@ class TableData(object):
         indices = self._get_fields_indices(fields)
         self._filter_columns(indices)
 
+    def print_paragraphs(self):
+        fields = self.header_names()
+        for i in range(len(self.rows)):
+            row = self.rows[i]
+            for field, value in zip(fields, row):
+                if value is not None:
+                    print('{}: {}'.format(field, value))
+            if i != len(self.rows) - 1:
+                print()
+
     def print_table(self, fmt='psql', include_headers=True):
         if include_headers:
             print(tabulate(self.rows, self.header_names(), tablefmt=fmt))
@@ -311,6 +321,12 @@ def job_table(jobs):
                 row[('result', name)] = value
         data.add_row(row)
     return data
+
+def print_exp(exp):
+    exp_table([exp]).print_paragraphs()
+
+def print_job(job):
+    job_table([job]).print_paragraphs()
 
 if __name__ == '__main__':
     main()
