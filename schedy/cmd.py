@@ -94,26 +94,36 @@ def cmd_show(db, args):
 
 def setup_list(subparsers):
     parser = subparsers.add_parser('list', help='List experiments/jobs (by default, lists all experiments).')
-    parser.set_defaults(func=cmd_list)
+    parser.set_defaults(func=cmd_list, parser=parser)
     parser.add_argument('experiment', nargs='?', help='Name of the experiment whose jobs will be listed.')
     parser.add_argument('-l', '--long', action='store_true', help='Long description for each experiment.')
+    parser.add_argument('-s', '--sort', help='Field by which we should sort. If the field name has no prefix, the field name will be searched among the root fields (i.e. not hyperparameters or results), then among results, then among hyperparameters. If you want to avoid ambiguity, you can prefix result fields with "r." (e.g. r.accuracy) and hyperparameters fields with "p." (e.g. p.learning_rate).')
+    parser.add_argument('-r', '--reverse', action='store_true', help='Reverse sorting order')
 
 def cmd_list(db, args):
     if args.experiment is None:
-        for exp in db.get_experiments():
-            if args.long:
+        if args.long:
+            def print_func(exp):
                 print_exp(exp)
                 print()
-            else:
+        else:
+            def print_func(exp):
                 print(exp.name)
+        results = db.get_experiments()
     else:
-        exp = db.get_experiment(args.experiment)
-        for job in exp.all_jobs():
-            if args.long:
+        if args.long:
+            def print_func(job):
                 print_job(job)
                 print()
-            else:
+        else:
+            def print_func(job):
                 print(job.job_id)
+        exp = db.get_experiment(args.experiment)
+        results = exp.all_jobs()
+    if args.sort is not None:
+        results = sort_results(args.parser, results, args.sort, args.reverse)
+    for result in results:
+        print_func(result)
 
 def setup_push(subparsers):
     parser = subparsers.add_parser('push', help='Manually add a job to an existing experiment.')
@@ -199,6 +209,58 @@ def print_job(job):
         print('Results:')
         for name, value in job.results.items():
             print(' - {}: {}'.format(name, json.dumps(value)))
+
+def sort_results(parser, results, sort_field, reverse=False):
+    not_found_num = 0
+    field_location = None
+    def check_location(location):
+        nonlocal field_location
+        # Check that the sort field can always be found in the same location
+        if field_location is not None and field_location != location:
+            parser.error('Ambiguous sort field: {}'.format(sort_field))
+        field_location = location
+    def sort_key(obj):
+        val = None
+        if sort_field.startswith('r.') and hasattr(obj, 'results'):
+            if obj.results is None:
+                val = None
+            else:
+                try:
+                    val = obj.results[sort_field[2:]]
+                    check_location(0)
+                except KeyError:
+                    pass
+        elif sort_field.startswith('p.') and hasattr(obj, 'hyperparameters'):
+            try:
+                val = obj.hyperparameters[sort_field[2:]]
+                check_location(1)
+            except KeyError:
+                pass
+        elif hasattr(obj, sort_field):
+            val = getattr(obj, sort_field)
+            check_location(2)
+        else:
+            if hasattr(obj, 'hyperparameters'):
+                try:
+                    val = obj.hyperparameters[sort_field]
+                    check_location(3)
+                except KeyError:
+                    pass
+            if hasattr(obj, 'results') and obj.results is not None:
+                try:
+                    val = obj.results[sort_field]
+                    check_location(4)
+                except KeyError:
+                    pass
+        # Return a tuple so that None values are always last
+        if val is None:
+            return (not reverse, None)
+        return (reverse, val)
+    sorted_results = sorted(results, key=sort_key, reverse=reverse)
+    print(field_location)
+    if field_location is None:
+        parser.error('Sort field {} was not found.'.format(sort_field))
+    return sorted_results
 
 if __name__ == '__main__':
     main()
