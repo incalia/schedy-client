@@ -4,6 +4,10 @@
 import argparse
 import schedy
 import json
+import sys
+from tabulate import tabulate
+
+DEFAULT_CATEGORY = 'schedy'
 
 def setup_add(subparsers):
     parser = subparsers.add_parser('add', help='Add an experiment.')
@@ -96,34 +100,30 @@ def setup_list(subparsers):
     parser = subparsers.add_parser('list', help='List experiments/jobs (by default, lists all experiments).')
     parser.set_defaults(func=cmd_list, parser=parser)
     parser.add_argument('experiment', nargs='?', help='Name of the experiment whose jobs will be listed.')
-    parser.add_argument('-l', '--long', action='store_true', help='Long description for each experiment.')
-    parser.add_argument('-s', '--sort', help='Field by which we should sort. If the field name has no prefix, the field name will be searched among the root fields (i.e. not hyperparameters or results), then among results, then among hyperparameters. If you want to avoid ambiguity, you can prefix result fields with "r." (e.g. r.accuracy) and hyperparameters fields with "p." (e.g. p.learning_rate).')
-    parser.add_argument('-r', '--reverse', action='store_true', help='Reverse sorting order')
+    parser.add_argument('-t', '--table', action='store_true', help='Long description, as a table.')
+    parser.add_argument('-p', '--paragraph', action='store_true', help='Long description, as a series of paragraphs.')
+    parser.add_argument('-s', '--sort', action='append', help='Field by which we should sort. You can specify multiple fields using this argument multiple times.')
+    parser.add_argument('-d', '--decreasing', action='store_true', help='Sort in reverse order (decreasing values).')
 
 def cmd_list(db, args):
     if args.experiment is None:
-        if args.long:
-            def print_func(exp):
-                print_exp(exp)
-                print()
-        else:
-            def print_func(exp):
-                print(exp.name)
-        results = db.get_experiments()
+        experiments = db.get_experiments()
+        table = exp_table(experiments)
     else:
-        if args.long:
-            def print_func(job):
-                print_job(job)
-                print()
-        else:
-            def print_func(job):
-                print(job.job_id)
         exp = db.get_experiment(args.experiment)
-        results = exp.all_jobs()
+        jobs = exp.all_jobs()
+        table = job_table(jobs)
     if args.sort is not None:
-        results = sort_results(args.parser, results, args.sort, args.reverse)
-    for result in results:
-        print_func(result)
+        try:
+            table.sort(args.sort, reverse=args.decreasing)
+        except KeyError as e:
+            args.parser.error(str(e))
+    if args.table:
+        table.print_table()
+    elif args.paragraph:
+        table.print_paragraphs()
+    else:
+        table.print_category(DEFAULT_CATEGORY)
 
 def setup_push(subparsers):
     parser = subparsers.add_parser('push', help='Manually add a job to an existing experiment.')
@@ -189,78 +189,105 @@ def main():
     db = schedy.SchedyDB(config_path=args.config)
     args.func(db, args)
 
-def print_exp(exp):
-    print('Name: {}'.format(exp.name))
-    print('Status: {}'.format(exp.status))
-    print('Scheduler: {}'.format(exp.SCHEDULER_NAME))
-    if isinstance(exp, schedy.RandomSearch):
-        print('Distributions:')
-        for name, dist in exp.distributions.items():
-            print(' - {}: {} ({})'.format(name, dist.FUNC_NAME, json.dumps(dist.args())))
+class TableData(object):
+    def __init__(self):
+        self.headers = list()
+        self.headers_idx = dict()
+        self.rows = list()
 
-def print_job(job):
-    print('Id: {}'.format(job.job_id))
-    print('Status: {}'.format(job.status))
-    print('Quality: {}'.format(job.quality))
-    print('Hyperparameters:')
-    for name, value in job.hyperparameters.items():
-        print(' - {}: {}'.format(name, json.dumps(value)))
-    if job.results is not None and len(job.results) > 0:
-        print('Results:')
-        for name, value in job.results.items():
-            print(' - {}: {}'.format(name, json.dumps(value)))
+    def add_row(self, data):
+        row = [None] * len(self.headers)
+        for key, value in data.items():
+            assert isinstance(key, tuple) and len(key) == 2 and isinstance(key[0], str) and isinstance(key[1], str), 'Invalid row key'
+            nfound = len(self.headers)
+            idx = self.headers_idx.setdefault(key, nfound)
+            if idx == nfound:
+                self.headers.append(key)
+            if idx >= len(row):
+                row.extend([None] * (idx - len(row) + 1))
+            row[idx] = value
+        self.rows.append(row)
 
-def sort_results(parser, results, sort_field, reverse=False):
-    not_found_num = 0
-    field_location = None
-    def check_location(location):
-        nonlocal field_location
-        # Check that the sort field can always be found in the same location
-        if field_location is not None and field_location != location:
-            parser.error('Ambiguous sort field: {}'.format(sort_field))
-        field_location = location
-    def sort_key(obj):
-        val = None
-        if sort_field.startswith('r.') and hasattr(obj, 'results'):
-            if obj.results is None:
-                val = None
-            else:
-                try:
-                    val = obj.results[sort_field[2:]]
-                    check_location(0)
-                except KeyError:
-                    pass
-        elif sort_field.startswith('p.') and hasattr(obj, 'hyperparameters'):
-            try:
-                val = obj.hyperparameters[sort_field[2:]]
-                check_location(1)
-            except KeyError:
-                pass
-        elif hasattr(obj, sort_field):
-            val = getattr(obj, sort_field)
-            check_location(2)
+    def header_names(self, explicit=False):
+        used_names = dict()
+        if not explicit:
+            expand = [False] * len(self.headers)
+            for idx, (category, name) in enumerate(self.headers):
+                withoutexp = used_names.setdefault(name, idx)
+                withexp = used_names.setdefault(category + '.' + name, idx)
+                if withoutexp != idx:
+                    expand[idx] = True
+                    expand[withoutexp] = True
+                if withexp != idx:
+                    expand[idx] = True
+                    expand[withoutexp] = True
         else:
-            if hasattr(obj, 'hyperparameters'):
+            expand = [True] * len(self.headers)
+        names = []
+        for (category, name), should_expand in zip(self.headers, expand):
+            if should_expand:
+                names.append(category + '.' + name)
+            else:
+                names.append(name)
+        return names
+
+    def sort(self, fields, reverse=False):
+        indices = []
+        for field in fields:
+            try:
+                indices.append(self.header_names(explicit=True).index(field))
+            except ValueError:
                 try:
-                    val = obj.hyperparameters[sort_field]
-                    check_location(3)
-                except KeyError:
-                    pass
-            if hasattr(obj, 'results') and obj.results is not None:
-                try:
-                    val = obj.results[sort_field]
-                    check_location(4)
-                except KeyError:
-                    pass
-        # Return a tuple so that None values are always last
-        if val is None:
-            return (not reverse, None)
-        return (reverse, val)
-    sorted_results = sorted(results, key=sort_key, reverse=reverse)
-    print(field_location)
-    if field_location is None:
-        parser.error('Sort field {} was not found.'.format(sort_field))
-    return sorted_results
+                    indices.append(self.header_names(explicit=False).index(field))
+                except ValueError:
+                    raise KeyError('Sort field "{}" not found or ambiguous.'.format(field))
+        def key_func(row):
+            key = tuple()
+            for idx in indices:
+                if idx < len(row):
+                    val = row[idx]
+                else:
+                    val = None
+                # Always put None at the end
+                if val is None:
+                    key = key + (not reverse, None)
+                else:
+                    key = key + (reverse, val)
+            return key
+        self.rows = sorted(self.rows, key=key_func, reverse=reverse)
+
+    def print_table(self):
+        print(tabulate(self.rows, self.header_names(), tablefmt='psql'))
+
+def exp_table(experiments):
+    data = TableData()
+    for exp in experiments:
+        row = {
+            (DEFAULT_CATEGORY, 'name'): exp.name,
+            (DEFAULT_CATEGORY, 'status'): exp.status,
+            (DEFAULT_CATEGORY, 'scheduler'): exp.SCHEDULER_NAME,
+        }
+        if isinstance(exp, schedy.RandomSearch):
+            for name, dist in exp.distributions.items():
+                row[('hyperparameter', name)] = '{} ({})'.format(dist.FUNC_NAME, json.dumps(dist.args()))
+        data.add_row(row)
+    return data
+
+def job_table(jobs):
+    data = TableData()
+    for job in jobs:
+        row = {
+            (DEFAULT_CATEGORY, 'id'): job.job_id,
+            (DEFAULT_CATEGORY, 'status'): job.status,
+            (DEFAULT_CATEGORY, 'quality'): job.quality,
+        }
+        for name, value in job.hyperparameters.items():
+            row[('hyperparameter', name)] = value
+        if job.results is not None:
+            for name, value in job.results.items():
+                row[('result', name)] = value
+        data.add_row(row)
+    return data
 
 if __name__ == '__main__':
     main()
