@@ -127,7 +127,7 @@ class Job(object):
         :py:exc:`schedy.errors.UnsafeUpdateError` in this case.
         '''
         if self.status != Job.RUNNING:
-            try_run()
+            self.try_run()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):

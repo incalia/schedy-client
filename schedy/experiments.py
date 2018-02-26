@@ -254,11 +254,11 @@ class RandomSearch(Experiment):
                 dist_type = DISTRIBUTION_TYPES[dist_name]
             except KeyError as e:
                 raise ValueError('Invalid or unknown distribution type: {}.'.format(dist_name))
-            distributions[key] = dist_type.from_args(dist_args)
+            distributions[key] = dist_type._from_args(dist_args)
         return cls(name=name, distributions=distributions, status=status)
 
     def _get_params(self):
-        return {key: {dist.FUNC_NAME: dist.args()} for key, dist in self.distributions.items()}
+        return {key: {dist.FUNC_NAME: dist._args()} for key, dist in self.distributions.items()}
 
 def _make_experiment(db, data):
     try:

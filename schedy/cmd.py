@@ -49,7 +49,7 @@ def cmd_add(db, args):
                 args.parser.error('Invalid distribution: {}.'.format(dist_name))
             try:
                 params = json.loads(params_txt)
-                hyperparameters[name] = dist_type.from_args(params)
+                hyperparameters[name] = dist_type._from_args(params)
             except (TypeError, ValueError, KeyError) as e:
                 args.parser.error('Invalid distribution parameters for {} ({!r}).'.format(name, e))
         exp = schedy.RandomSearch(args.experiment, status=args.status, distributions=hyperparameters)
@@ -302,7 +302,7 @@ def exp_table(experiments):
         }
         if isinstance(exp, schedy.RandomSearch):
             for name, dist in exp.distributions.items():
-                row[('hyperparameter', name)] = '{} ({})'.format(dist.FUNC_NAME, json.dumps(dist.args()))
+                row[('hyperparameter', name)] = '{} ({})'.format(dist.FUNC_NAME, json.dumps(dist._args()))
         data.add_row(row)
     return data
 
