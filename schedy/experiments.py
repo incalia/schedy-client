@@ -13,19 +13,41 @@ from .pagination import PageObjectsIterator
 
 logger = logging.getLogger(__name__)
 
-EXPERIMENT_RUNNING = 'RUNNING'
-EXPERIMENT_DONE = 'DONE'
-
 def _check_status(status):
-    return status in (EXPERIMENT_RUNNING, EXPERIMENT_DONE)
+    return status in (Experiment.RUNNING, Experiment.DONE)
 
 class Experiment(object):
-    def __init__(self, name, status=EXPERIMENT_RUNNING):
+    #: Status of a running experiment.
+    RUNNING = 'RUNNING'
+    #: Status of a completed (or paused) experiment.
+    DONE = 'DONE'
+
+    def __init__(self, name, status=RUNNING):
+        '''
+        Base-class for all experiments.
+
+        Args:
+            name (str): Name of the experiment. An experience is uniquely
+                identified by its name.
+            status (str): Status of the experiment. See :ref:`experiment_status`
+        '''
         self.name = name
         self.status = status
         self._db = None
 
     def add_job(self, **kwargs):
+        '''
+        Adds a new job to this experiment.
+
+        Args:
+            hyperparameters (dict): A dictionnary of hyperparameters values.
+            status (str): Job status. See :ref:`job_status`. Default: QUEUED.
+            quality (float): Quality of this job. Default: 0.
+            results (dict): A dictionnary of result values. Default: No results (empty dictionary).
+
+        Returns:
+            schedy.Job: The instance of the new job.
+        '''
         partial_job = Job(
                 job_id=None,
                 experiment=None,
@@ -39,6 +61,14 @@ class Experiment(object):
         return _job_from_response(self, response)
 
     def next_job(self):
+        '''
+        Returns a new job to be worked on. This job will be set in the
+        ``RUNNING`` state. This function handles everything so that two
+        workers never start working on the same job.
+
+        Returns:
+            schedy.Job: The instance of the requested job.
+        '''
         assert self._db is not None, 'Experiment was not added to a database'
         url = urljoin(self._db._experiment_url(self.name), 'nextjob/')
         job = None
@@ -58,6 +88,12 @@ class Experiment(object):
         return job
 
     def all_jobs(self):
+        '''
+        Retrieves all the jobs belonging to this experiment.
+
+        Returns:
+            iterator of :py:class:`schedy.Job`: An iterator over all the jobs of this experiment.
+        '''
         assert self._db is not None, 'Experiment was not added to a database'
         url = self._jobs_url()
         return PageObjectsIterator(
@@ -66,6 +102,15 @@ class Experiment(object):
         )
 
     def get_job(self, job_id):
+        '''
+        Retrieves a job by id.
+
+        Args:
+            job_id (str): Id of the job to retrieve.
+
+        Returns:
+            schedy.Job: Instance of the requested job.
+        '''
         assert self._db is not None, 'Experiment was not added to a database'
         url = self._db._job_url(self.name, job_id)
         response = self._db._authenticated_request('GET', url)
@@ -80,6 +125,9 @@ class Experiment(object):
             return '{}(name={!r})'.format(self.__class__.__name__, self.name)
 
     def push_updates(self):
+        '''
+        Push all the updates made to this experiment to the service.
+        '''
         assert self._db is not None, 'Experiment was not added to a database'
         url = self._db._experiment_url(self.name)
         content = self._to_map_definition()
@@ -88,6 +136,13 @@ class Experiment(object):
         errors._handle_response_errors(response)
 
     def delete(self, ensure=True):
+        '''
+        Deletes this experiment.
+
+        Args:
+            ensure (bool): If true, an exception will be raised if the experiment was
+                deleted before this call.
+        '''
         assert self._db is not None, 'Experiment was not added to a database'
         url = self._db._experiment_url(self.name)
         if ensure:
@@ -142,6 +197,12 @@ class Experiment(object):
         return urljoin(self._db._experiment_url(self.name), 'jobs/')
 
 class ManualSearch(Experiment):
+    '''
+    Inherits :py:class:`schedy.Experiment`. Represents a manual search, that
+    is to say an experiment for which the only jobs returned by
+    :py:meth:`schedy.Experiment.next_job` are jobs that were queued beforehand
+    (by using :py:meth:`schedy.Experiment.add_job` for example).
+    '''
     SCHEDULER_NAME = 'Manual'
 
     @classmethod
@@ -156,7 +217,23 @@ class ManualSearch(Experiment):
 class RandomSearch(Experiment):
     SCHEDULER_NAME = 'RandomSearch'
 
-    def __init__(self, name, distributions, status=EXPERIMENT_RUNNING):
+    def __init__(self, name, distributions, status=Experiment.RUNNING):
+        '''
+        Inherits :py:class:`schedy.Experiment`. Represents a random search, that
+        is to say en experiment that returns jobs with random hyperparameters when
+        no job was queued manually using :py:meth:`schedy.Experiment.add_job`.
+
+        If you create a job manually for this experiment, it must have only and
+        all the parameters specified in the ``distributions`` parameter.
+
+        Args:
+            name (str): Name of the experiment. An experience is uniquely
+                identified by its name.
+            distributions (dict): A dictionary of distributions (see
+                :py:mod:`schedy.random`), whose keys are the names of the
+                hyperparameters.
+            status (str): Status of the experiment. See :ref:`experiment_status`
+        '''
         super().__init__(name, status)
         self.distributions = distributions
 

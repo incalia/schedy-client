@@ -18,6 +18,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+#: Number of retries if the authentication fails.
 NUM_AUTH_RETRIES = 2
 
 def _default_config_path():
@@ -25,6 +26,16 @@ def _default_config_path():
 
 class SchedyDB(object):
     def __init__(self, config_path=None):
+        '''
+        SchedyDB is the central component of Schedy. It represents your
+        connection the the Schedy service.
+
+        Args:
+            config_path (str): Path to the client configuration file. This file
+                contains your credentials (email, API token). By default,
+                ~/.schedy/client.json is used. See :ref:`setup` for
+                instructions about how to use this file.
+        '''
         self._load_config(config_path)
         # Add the trailing slash if it's not there
         if len(self.root) == 0 or self.root[-1] != '/':
@@ -36,6 +47,10 @@ class SchedyDB(object):
         self._session = None
 
     def authenticate(self):
+        '''
+        Renew authentication. You do not usually need to call this function, as
+        it will always be called automatically when needed.
+        '''
         logger.debug('Renewing authentication')
         url = urljoin(self.root, 'token/')
         response = self._perform_request('POST', url, json={'email': self.email, 'token': self.api_token})
@@ -53,6 +68,18 @@ class SchedyDB(object):
         logger.debug('A new token was obtained.')
 
     def add_experiment(self, exp):
+        '''
+        Adds an experiment to the Schedy service. Use this function to create
+        new experiments.
+
+        Args:
+            exp (schedy.Experiment): The experiment to add.
+
+        Example:
+            >>> db = schedy.SchedyDB()
+            >>> exp = schedy.ManualSearch('TestExperiment')
+            >>> db.add_experiment(exp)
+        '''
         url = self._experiment_url(exp.name)
         content = exp._to_map_definition()
         data = json.dumps(content)
@@ -65,6 +92,21 @@ class SchedyDB(object):
         exp._db = self
 
     def get_experiment(self, name):
+        '''
+        Retrieves an experiment from the Schedy service by name.
+
+        Args:
+            name (str): Name of the experiment.
+
+        Returns:
+            schedy.Experiment: An experiment of the appropriate type.
+        
+        Example:
+            >>> db = schedy.SchedyDB()
+            >>> exp = db.get_experiment('TestExperiment')
+            >>> print(type(exp))
+            <class 'schedy.experiments.ManualSearch'>
+        '''
         url = self._experiment_url(name)
         response = self._authenticated_request('GET', url)
         errors._handle_response_errors(response)
@@ -80,12 +122,26 @@ class SchedyDB(object):
         return exp
 
     def get_experiments(self):
+        '''
+        Retrieves all the experiments from the Schedy service.
+
+        Returns:
+            iterator of :py:class:`schedy.Experiment`: Iterator over all the experiments.
+        '''
         return PageObjectsIterator(
             reqfunc=functools.partial(self._authenticated_request, 'GET', self._all_experiments_url()),
             obj_creation_func=functools.partial(_make_experiment, self),
         )
 
     def register_scheduler(self, experiment_type):
+        '''
+        Registers a new type of experiment. You should never have to use this
+        function yourself.
+
+        Args:
+            experiment_type (class): Type of the experiment, it must have an
+                attribute called SCHEDULER_NAME.
+        '''
         self._schedulers[experiment_type.SCHEDULER_NAME] = experiment_type
 
     def _register_default_schedulers(self):

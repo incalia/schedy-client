@@ -46,7 +46,7 @@ Let's do this::
         y = random.uniform(-100, 100)
         result = x ** 2 + y ** 2
         # Tell Schedy about it!
-        experiment.add_job(status=schedy.JOB_DONE, hyperparameters={'x': x, 'y': y}, results={'result': result})
+        experiment.add_job(status=schedy.Job.DONE, hyperparameters={'x': x, 'y': y}, results={'result': result})
 
 Not too difficult right? Now let's see how we performed, by listing the results of each job.
 

@@ -12,5 +12,5 @@ for i in range(20):
     y = random.uniform(-10, 10)
     result = x ** 2 + y ** 2
     # Tell Schedy about it!
-    experiment.add_job(status=schedy.JOB_DONE, hyperparameters={'x': x, 'y': y}, results={'result': result})
+    experiment.add_job(status=schedy.Job.DONE, hyperparameters={'x': x, 'y': y}, results={'result': result})
 
