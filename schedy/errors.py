@@ -3,10 +3,22 @@
 import requests
 
 class SchedyError(Exception):
+    '''
+    Base class for all Schedy exceptions.
+    '''
     pass
 
 class HTTPError(SchedyError):
+    '''
+    Base class for exceptions caused by a transaction with the service.
+    '''
     def __init__(self, body, code, *args):
+        '''
+        Args:
+            body (str): Error message.
+            code (int or None): HTTP status code.
+            args (list): Other arguments passed to :py:exc:`Exception`.
+        '''
         self.code = code
         self.body = body
         # Truncate long bodies
@@ -22,30 +34,59 @@ class HTTPError(SchedyError):
         super().__init__(message, *args)
 
 class ClientError(HTTPError):
+    '''
+    Exception caused by the client side.
+    '''
     pass
 
 class ClientRequestError(ClientError):
+    '''
+    Exception caused by the content of the request.
+    '''
     pass
 
 class AuthenticationError(ClientRequestError):
+    '''
+    Authentication error, access to the resource is forbidden.
+    '''
     pass
 
 class ReauthenticateError(ClientRequestError):
+    '''
+    Authentication error, the client should retry after authenticating again.
+    '''
     pass
 
 class ResourceExistsError(ClientRequestError):
+    '''
+    The resource cannot be created because it exists already.
+    '''
     pass
 
 class UnsafeUpdateError(ClientRequestError):
+    '''
+    The resource cannot be updated safely because it has been modified by
+    another client since its state was retrieved, so updating it could
+    overwrite these modifications.
+    '''
     pass
 
 class NoJobError(ClientRequestError):
+    '''
+    The request could not return any job.
+    '''
     pass
 
 class UnhandledResponseError(ClientError):
+    '''
+    The response could not be parsed or handled.
+    '''
     pass
 
 class ServerError(HTTPError):
+    '''
+    Server-side exception.
+    '''
     pass
 
 def _handle_response_errors(response):
