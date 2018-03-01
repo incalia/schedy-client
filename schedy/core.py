@@ -26,7 +26,7 @@ def _default_config_path():
     return os.path.join(os.path.expanduser('~'), '.schedy', 'client.json')
 
 class SchedyDB(object):
-    def __init__(self, config_path=None):
+    def __init__(self, config_path=None, config_override=None):
         '''
         SchedyDB is the central component of Schedy. It represents your
         connection the the Schedy service.
@@ -36,8 +36,10 @@ class SchedyDB(object):
                 contains your credentials (email, API token). By default,
                 ~/.schedy/client.json is used. See :ref:`setup` for
                 instructions about how to use this file.
+            config_override (dict): Content of the configuration. You can use this to
+                if you do not want to use a configuration file.
         '''
-        self._load_config(config_path)
+        self._load_config(config_path, config_override)
         # Add the trailing slash if it's not there
         if len(self.root) == 0 or self.root[-1] != '/':
             self.root = self.root + '/'
@@ -53,7 +55,10 @@ class SchedyDB(object):
         it will always be called automatically when needed.
         '''
         logger.debug('Renewing authentication')
-        url = urljoin(self.root, 'token/')
+        if self.token_type == 'password':
+            url = urljoin(self.root, 'passauth/')
+        else:
+            url = urljoin(self.root, 'token/')
         response = self._perform_request('POST', url, json={'email': self.email, 'token': self.api_token})
         errors._handle_response_errors(response)
         try:
@@ -158,16 +163,21 @@ class SchedyDB(object):
     def _job_url(self, experiment, job):
         return urljoin(self.root, 'experiments/{}/jobs/{}/'.format(urlquote(experiment, safe=''), urlquote(job, safe='')))
 
-    def _load_config(self, config_path):
-        if config_path is None:
-            config_path = _default_config_path()
-        if hasattr(config_path, 'read'):
-            config = json.loads(config_path.read())
-        else:
-            with open(config_path) as f:
-                config = json.load(f)
+    def _load_config(self, config_path, config):
+        if config is None:
+            if config_path is None:
+                config_path = _default_config_path()
+            if hasattr(config_path, 'read'):
+                config = json.loads(config_path.read())
+            else:
+                with open(config_path) as f:
+                    config = json.load(f)
         self.root = config['root']
         self.email = config['email']
+        self.token_type = config.get('token_type', 'api_token')
+        allowed_token_types = ['api_token', 'password']
+        if self.token_type not in allowed_token_types:
+            raise ValueError('Configuration value token_type must be one of {}.'.format(', '.join(allowed_token_types)))
         self.api_token = config['token']
 
     def _authenticated_request(self, *args, **kwargs):

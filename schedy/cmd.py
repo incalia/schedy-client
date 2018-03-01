@@ -4,8 +4,10 @@
 import argparse
 import schedy
 import json
-import sys
 from tabulate import tabulate
+import getpass
+from urllib.parse import urljoin
+import os
 
 DEFAULT_CATEGORY = 'schedy'
 
@@ -17,7 +19,7 @@ def setup_add(subparsers):
     sched_subparsers = parser.add_subparsers(title='Schedulers', dest='scheduler', help='Scheduler type (manual search, random search...)')
     sched_subparsers.required = True
     # Manual scheduling
-    manual_parser = sched_subparsers.add_parser('manual', help='Manual search')
+    sched_subparsers.add_parser('manual', help='Manual search')
     # Random search
     random_parser = sched_subparsers.add_parser('random', help='Random search')
     RANDOM_HP_HELP = (
@@ -30,7 +32,8 @@ def setup_add(subparsers):
     random_parser.add_argument('hyperparameters', nargs='+', help=RANDOM_HP_HELP)
     random_parser.set_defaults(parser=random_parser)
 
-def cmd_add(db, args):
+def cmd_add(args):
+    db = schedy.SchedyDB(config_path=args.config)
     if args.scheduler == 'manual':
         exp = schedy.ManualSearch(args.experiment, status=args.status)
     elif args.scheduler == 'random':
@@ -62,7 +65,8 @@ def setup_rm(subparsers):
     parser.add_argument('job', nargs='?', help='Name of the job.')
     parser.add_argument('-f', '--force', action='store_true', help='Don\'t ask for confirmation.')
 
-def cmd_rm(db, args):
+def cmd_rm(args):
+    db = schedy.SchedyDB(config_path=args.config)
     exp = db.get_experiment(args.experiment)
     if args.job is None:
         if not args.force:
@@ -88,7 +92,8 @@ def setup_show(subparsers):
     parser.add_argument('experiment', help='Name for the new experiment.')
     parser.add_argument('job', nargs='?', help='Name of the job.')
 
-def cmd_show(db, args):
+def cmd_show(args):
+    db = schedy.SchedyDB(config_path=args.config)
     exp = db.get_experiment(args.experiment)
     if args.job is None:
         print_exp(exp)
@@ -106,7 +111,8 @@ def setup_list(subparsers):
     parser.add_argument('-d', '--decreasing', action='store_true', help='Sort in reverse order (decreasing values).')
     parser.add_argument('-f', '--field', action='append', help='Specify this option multiple times to select the fields you want to diply (all by default).')
 
-def cmd_list(db, args):
+def cmd_list(args):
+    db = schedy.SchedyDB(config_path=args.config)
     if args.experiment is None:
         experiments = db.get_experiments()
         table = exp_table(experiments)
@@ -141,6 +147,7 @@ def setup_push(subparsers):
     parser.set_defaults(parser=parser)
 
 def cmd_push(db, args):
+    db = schedy.SchedyDB(config_path=args.config)
     kwargs = dict()
     # Status, quality
     if args.status is not None:
@@ -180,6 +187,44 @@ def cmd_push(db, args):
     job = exp.add_job(**kwargs)
     print_job(job)
 
+def setup_gen_token(subparsers):
+    parser = subparsers.add_parser('gen-token', help='Generate and save a new API token (i.e. configuration file).')
+    parser.set_defaults(func=cmd_gen_token)
+    parser.add_argument('--root', default='https://api.schedy.io/', help='Schedy API root URL.')
+    parser.add_argument('--email', help='User email (prompted if not provided).')
+    parser.add_argument('--password', help='User password (prompted if not provided).')
+
+def cmd_gen_token(args):
+    config = {
+        'root': args.root,
+        'token_type': 'password',
+    }
+    if args.email is None:
+        config['email'] = input('Email: ')
+    else:
+        config['email'] = args.email
+    if args.password is None:
+        config['token'] = getpass.getpass('Password: ')
+    else:
+        config['token'] = args.password
+    db = schedy.SchedyDB(config_override=config)
+    url = urljoin(db.root, 'resettoken/')
+    response = db._authenticated_request('POST', url=url)
+    schedy.errors._handle_response_errors(response)
+    new_content = response.json()
+    if args.config is None:
+        config_path = schedy.core._default_config_path()
+    else:
+        config_path = args.config
+    config_dir = os.path.dirname(config_path)
+    if config_dir:
+        try:
+            os.makedirs(config_dir)
+        except FileExistsError:
+            pass
+    with open(config_path, 'w') as config_file:
+        json.dump(new_content, config_file)
+
 def main():
     parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')
     parser.add_argument('--config', type=str, help='Schedy configuration file.')
@@ -190,9 +235,9 @@ def main():
     setup_show(subparsers)
     setup_list(subparsers)
     setup_push(subparsers)
+    setup_gen_token(subparsers)
     args = parser.parse_args()
-    db = schedy.SchedyDB(config_path=args.config)
-    args.func(db, args)
+    args.func(args)
 
 class TableData(object):
     def __init__(self):
