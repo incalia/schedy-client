@@ -10,6 +10,7 @@ import json
 import requests
 import os.path
 import datetime
+from urllib.parse import quote as urlquote
 from urllib.parse import urljoin
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -31,7 +32,7 @@ class SchedyDB(object):
         connection the the Schedy service.
 
         Args:
-            config_path (str): Path to the client configuration file. This file
+            config_path (str or file-object): Path to the client configuration file. This file
                 contains your credentials (email, API token). By default,
                 ~/.schedy/client.json is used. See :ref:`setup` for
                 instructions about how to use this file.
@@ -152,17 +153,20 @@ class SchedyDB(object):
         return urljoin(self.root, 'experiments/')
 
     def _experiment_url(self, name):
-        return urljoin(self._all_experiments_url(), '{}/'.format(name))
+        return urljoin(self._all_experiments_url(), '{}/'.format(urlquote(name, safe='')))
 
     def _job_url(self, experiment, job):
-        return urljoin(self.root, 'experiments/{}/jobs/{}/'.format(experiment, job))
+        return urljoin(self.root, 'experiments/{}/jobs/{}/'.format(urlquote(experiment, safe=''), urlquote(job, safe='')))
 
     def _load_config(self, config_path):
         if config_path is None:
             config_path = _default_config_path()
-        with open(config_path) as f:
-            config = json.load(f)
-        self.root = config.get('root', 'https://schedy.io/api/')
+        if hasattr(config_path, 'read'):
+            config = json.loads(config_path.read())
+        else:
+            with open(config_path) as f:
+                config = json.load(f)
+        self.root = config['root']
         self.email = config['email']
         self.api_token = config['token']
 

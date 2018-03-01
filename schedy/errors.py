@@ -97,6 +97,8 @@ def _handle_response_errors(response):
         raise AuthenticationError(response.text, code)
     if code == requests.codes.unauthorized:
         raise ReauthenticateError(response.text, code)
+    if code == requests.codes.precondition_failed:
+        raise UnsafeUpdateError(response.text, code)
     if code in range(400, 500):
         raise ClientRequestError(response.text, code)
     if code in range(500, 600):

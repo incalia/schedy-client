@@ -84,6 +84,7 @@ class Experiment(object):
             try:
                 job.try_run()
             except errors.UnsafeUpdateError:
+                job = None
                 logger.debug('Two workers tried to start working on the same job, retrying.', exc_info=True)
         return job
 
