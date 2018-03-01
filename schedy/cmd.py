@@ -223,7 +223,7 @@ def cmd_gen_token(args):
         except FileExistsError:
             pass
     with open(config_path, 'w') as config_file:
-        json.dump(new_content, config_file)
+        json.dump(new_content, config_file, cls=schedy.encoding.SchedyJSONEncoder)
 
 def main():
     parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')
@@ -347,7 +347,7 @@ def exp_table(experiments):
         }
         if isinstance(exp, schedy.RandomSearch):
             for name, dist in exp.distributions.items():
-                row[('hyperparameter', name)] = '{} ({})'.format(dist.FUNC_NAME, json.dumps(dist._args()))
+                row[('hyperparameter', name)] = '{} ({})'.format(dist.FUNC_NAME, json.dumps(dist._args(), cls=schedy.encoding.SchedyJSONEncoder))
         data.add_row(row)
     return data
 

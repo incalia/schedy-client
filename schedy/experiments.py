@@ -6,7 +6,7 @@ import json
 import functools
 import logging
 
-from . import errors
+from . import errors, encoding
 from .random import DISTRIBUTION_TYPES
 from .jobs import Job, _make_job, _job_from_response
 from .pagination import PageObjectsIterator
@@ -55,7 +55,7 @@ class Experiment(object):
         assert self._db is not None, 'Experiment was not added to a database'
         url = self._jobs_url()
         map_def = partial_job._to_map_definition()
-        data = json.dumps(map_def)
+        data = json.dumps(map_def, cls=encoding.SchedyJSONEncoder)
         response = self._db._authenticated_request('POST', url, data=data)
         errors._handle_response_errors(response)
         return _job_from_response(self, response)
@@ -132,7 +132,7 @@ class Experiment(object):
         assert self._db is not None, 'Experiment was not added to a database'
         url = self._db._experiment_url(self.name)
         content = self._to_map_definition()
-        data = json.dumps(content)
+        data = json.dumps(content, cls=encoding.SchedyJSONEncoder)
         response = self._db._authenticated_request('PUT', url, data=data)
         errors._handle_response_errors(response)
 
