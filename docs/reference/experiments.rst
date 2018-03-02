@@ -21,6 +21,7 @@ Manual search
 -------------
 
 .. autoclass:: schedy.ManualSearch
+    :show-inheritance:
     :members:
     :undoc-members:
 
@@ -28,5 +29,15 @@ Random search
 -------------
 
 .. autoclass:: schedy.RandomSearch
+    :show-inheritance:
     :members:
     :undoc-members:
+
+Population Based Training
+-------------------------
+
+.. autoclass:: schedy.PopulationBasedTraining
+    :show-inheritance:
+    :members:
+    :undoc-members:
+

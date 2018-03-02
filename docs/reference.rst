@@ -6,6 +6,7 @@ API Reference
    reference/experiments
    reference/jobs
    reference/random
+   reference/pbt
    reference/errors
    reference/advanced
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 class LogUniform(object):
-    FUNC_NAME = 'loguniform'
+    _FUNC_NAME = 'loguniform'
 
     def __init__(self, low, high):
         '''
@@ -34,7 +34,7 @@ class LogUniform(object):
             self.high == other.high
 
 class Uniform(object):
-    FUNC_NAME = 'uniform'
+    _FUNC_NAME = 'uniform'
 
     def __init__(self, low, high):
         '''
@@ -65,7 +65,7 @@ class Uniform(object):
             self.high == other.high
 
 class Choice(object):
-    FUNC_NAME = 'choice'
+    _FUNC_NAME = 'choice'
 
     def __init__(self, values, weights=None):
         '''
@@ -108,7 +108,7 @@ class Choice(object):
             self.weights == other.weights
 
 class Normal(object):
-    FUNC_NAME = 'normal'
+    _FUNC_NAME = 'normal'
 
     def __init__(self, mean, std):
         '''
@@ -139,7 +139,7 @@ class Normal(object):
             self.std == other.std
 
 class Constant(object):
-    FUNC_NAME = 'const'
+    _FUNC_NAME = 'const'
 
     def __init__(self, value):
         '''
@@ -164,4 +164,4 @@ class Constant(object):
         return type(self) == type(other) and \
             self.value == other.value
 
-DISTRIBUTION_TYPES = {cls.FUNC_NAME: cls for cls in (LogUniform, Uniform, Choice, Normal, Constant)}
+_DISTRIBUTION_TYPES = {cls._FUNC_NAME: cls for cls in (LogUniform, Uniform, Choice, Normal, Constant)}

@@ -7,7 +7,8 @@ import functools
 import logging
 
 from . import errors, encoding
-from .random import DISTRIBUTION_TYPES
+from .random import _DISTRIBUTION_TYPES
+from .pbt import _EXPLOIT_STRATEGIES, _EXPLORE_STRATEGIES
 from .jobs import Job, _make_job, _job_from_response
 from .pagination import PageObjectsIterator
 
@@ -29,7 +30,7 @@ class Experiment(object):
         Args:
             name (str): Name of the experiment. An experience is uniquely
                 identified by its name.
-            status (str): Status of the experiment. See :ref:`experiment_status`
+            status (str): Status of the experiment. See :ref:`experiment_status`.
         '''
         self.name = name
         self.status = status
@@ -162,9 +163,9 @@ class Experiment(object):
 
     def _to_map_definition(self):
         try:
-            scheduler = self.SCHEDULER_NAME
+            scheduler = self._SCHEDULER_NAME
         except AttributeError as e:
-            raise AttributeError('Experiment implementations should define a SCHEDULER_NAME attribute') from e
+            raise AttributeError('Experiment implementations should define a _SCHEDULER_NAME attribute') from e
         return {
                 'status': self.status,
                 'scheduler': {scheduler: self._get_params()},
@@ -199,12 +200,12 @@ class Experiment(object):
 
 class ManualSearch(Experiment):
     '''
-    Inherits :py:class:`schedy.Experiment`. Represents a manual search, that
-    is to say an experiment for which the only jobs returned by
-    :py:meth:`schedy.Experiment.next_job` are jobs that were queued beforehand
-    (by using :py:meth:`schedy.Experiment.add_job` for example).
+    Represents a manual search, that is to say an experiment for which the only
+    jobs returned by :py:meth:`schedy.Experiment.next_job` are jobs that were
+    queued beforehand (by using :py:meth:`schedy.Experiment.add_job` for
+    example).
     '''
-    SCHEDULER_NAME = 'Manual'
+    _SCHEDULER_NAME = 'Manual'
 
     @classmethod
     def _create_from_params(cls, name, status, params):
@@ -216,24 +217,24 @@ class ManualSearch(Experiment):
         return None
 
 class RandomSearch(Experiment):
-    SCHEDULER_NAME = 'RandomSearch'
+    _SCHEDULER_NAME = 'RandomSearch'
 
     def __init__(self, name, distributions, status=Experiment.RUNNING):
         '''
-        Inherits :py:class:`schedy.Experiment`. Represents a random search, that
-        is to say en experiment that returns jobs with random hyperparameters when
-        no job was queued manually using :py:meth:`schedy.Experiment.add_job`.
+        Represents a random search, that is to say en experiment that returns
+        jobs with random hyperparameters when no job was queued manually using
+        :py:meth:`schedy.Experiment.add_job`.
 
         If you create a job manually for this experiment, it must have only and
-        all the parameters specified in the ``distributions`` parameter.
+        all the hyperparameters specified in the ``distributions`` parameter.
 
         Args:
-            name (str): Name of the experiment. An experience is uniquely
+            name (str): Name of the experiment. An experiment is uniquely
                 identified by its name.
             distributions (dict): A dictionary of distributions (see
                 :py:mod:`schedy.random`), whose keys are the names of the
                 hyperparameters.
-            status (str): Status of the experiment. See :ref:`experiment_status`
+            status (str): Status of the experiment. See :ref:`experiment_status`.
         '''
         super().__init__(name, status)
         self.distributions = distributions
@@ -252,14 +253,118 @@ class RandomSearch(Experiment):
             except (KeyError, TypeError) as e:
                 raise ValueError('Invalid distribution definition.') from e
             try:
-                dist_type = DISTRIBUTION_TYPES[dist_name]
+                dist_type = _DISTRIBUTION_TYPES[dist_name]
             except KeyError as e:
                 raise ValueError('Invalid or unknown distribution type: {}.'.format(dist_name))
             distributions[key] = dist_type._from_args(dist_args)
         return cls(name=name, distributions=distributions, status=status)
 
     def _get_params(self):
-        return {key: {dist.FUNC_NAME: dist._args()} for key, dist in self.distributions.items()}
+        return {key: {dist._FUNC_NAME: dist._args()} for key, dist in self.distributions.items()}
+
+class PopulationBasedTraining(Experiment):
+    _SCHEDULER_NAME = 'PBT'
+
+    def __init__(self, name, objective, result_name, exploit, explore=dict(), initial_distributions=dict(), population_size=None, status=Experiment.RUNNING):
+        '''
+        Implements Population Based Training (see `paper
+        <https://arxiv.org/pdf/1711.09846.pdf>`_).
+
+        You have two ways to specify the initial jobs for Population Based
+        training. You can create them manually using
+        :py:meth:`schedy.Experiment.add_job`, or you can specify the
+        ``initial_distributions`` and ``population_size`` parameters.
+
+        If you create a job manually for this experiment, it must have at least
+        the hyperparameters specified in the ``explore`` parameter.
+
+        Args:
+            name (str): Name of the experiment. An experiment is uniquely
+                identified by its name.
+            objective (str): The objective of the training, either
+                :py:attr:`schedy.pbt.MINIMIZE` (to
+                minimize a result) or
+                :py:attr:`schedy.pbt.MAXIMIZE` (to
+                maximize a result).
+            result_name (str): The name of the result to optimize. This result
+                must be present in the results of all
+                :py:attr:`~schedy.Experiment.RUNNING` jobs of this experiment.
+            exploit (schedy.pbt.ExploitStrategy): Strategy to use to
+                exploit the results (i.e. to focus on the most promising jobs).
+            explore (dict): Strategy to use to explore new hyperparameter values.
+                The keys of the dictionary are the name of the
+                hyperparameters (str), and the values are the strategy
+                associated with the hyperparameter
+                (:py:class:`schedy.pbt.ExploreStrategy`). Values for the
+                omitted hyperparameters will not be explored. This parameter is
+                optional: if you do not specify any explore strategy, only
+                exploitation will be used.
+            initial_distributions (dict): The initial distributions for the
+                hyperparameters, as dictionary of distributions (see
+                :py:mod:`schedy.random`) whose keys are the names of the
+                hyperparameters. This parameter optional, you can also create
+                the initial jobs manually. If you use this parameter, make sure
+                to use ``population_size`` as well.
+            population_size (int): Number of initial jobs to create, before
+                starting to exploit/explore (i.e. size of the population). It
+                does **not** have to be the number of jobs you can process in
+                parallel. The original paper used values between 10 and 80.
+            status (str): Status of the experiment. See :ref:`experiment_status`.
+        '''
+        super().__init__(name, status)
+        self.objective = objective
+        self.result_name = result_name
+        self.exploit = exploit
+        self.explore = explore
+        self.initial_distributions = initial_distributions
+        self.population_size = population_size
+
+    @classmethod
+    def _create_from_params(cls, name, status, params):
+        kwargs = {
+            'name': name,
+            'status': status,
+            'objective': params['objective'],
+            'result_name': params['qualityResultName'],
+        }
+        exploit_type, exploit_params = next(iter(params['exploit'].items()))
+        kwargs['exploit'] = _EXPLOIT_STRATEGIES[exploit_type]._from_params(exploit_params)
+        population_size = params.get('numParallel')
+        if population_size is not None:
+            kwargs['population_size'] = population_size
+        initial_distributions = params.get('init')
+        if initial_distributions is not None:
+            init_param = dict()
+            for hp, dist_map in initial_distributions.items():
+                dist_name, dist_params = next(iter(dist_map.items()))
+                init_param[hp] = _DISTRIBUTION_TYPES[dist_name]._from_args(dist_params)
+            kwargs['initial_distributions'] = init_param
+        explore = params.get('explore')
+        if explore is not None:
+            explore_map = dict()
+            for hp, strat_map in explore.items():
+                strat_name, strat_params = next(iter(strat_map.items()))
+                explore_map[hp] = _EXPLORE_STRATEGIES[strat_name]._from_params(strat_params)
+            kwargs['explore'] = explore_map
+        return cls(**kwargs)
+
+    def _get_params(self):
+        params = {
+            'objective': self.objective,
+            'qualityResultName': self.result_name,
+        }
+        if self.population_size:
+            params['numParallel'] = self.population_size
+        if self.initial_distributions:
+            params['init'] = {
+                name: {dist._FUNC_NAME: dist._args()} for name, dist in self.initial_distributions.items()
+            }
+        params['exploit'] = {self.exploit._EXPLOIT_STRATEGY_NAME: self.exploit._get_params()}
+        if self.explore:
+            params['explore'] = {
+                name: {strat._EXPLORE_STRATEGY_NAME: strat._get_params()} for name, strat in self.explore.items()
+            }
+        return params
 
 def _make_experiment(db, data):
     try:

@@ -28,7 +28,7 @@ def setup_add(subparsers):
         '"distribution" is a distribution among: {}. '
         '"params" is the JSON value for the parameters of the distribution. '
         'Example: learning_rate loguniform \'{{"base": 10, "lowExp": -1, "highExp": 5}}\' num_lays choice \'{{"values": [5, 6, 7, 8]}}\''
-    ).format(', '.join(schedy.random.DISTRIBUTION_TYPES.keys()))
+    ).format(', '.join(schedy.random._DISTRIBUTION_TYPES.keys()))
     random_parser.add_argument('hyperparameters', nargs='+', help=RANDOM_HP_HELP)
     random_parser.set_defaults(parser=random_parser)
 
@@ -47,7 +47,7 @@ def cmd_add(args):
             if name in hyperparameters:
                 args.parser.error('Duplicate hyperparameter: {}.'.format(name))
             try:
-                dist_type = schedy.random.DISTRIBUTION_TYPES[dist_name]
+                dist_type = schedy.random._DISTRIBUTION_TYPES[dist_name]
             except KeyError:
                 args.parser.error('Invalid distribution: {}.'.format(dist_name))
             try:
@@ -343,11 +343,11 @@ def exp_table(experiments):
         row = {
             (DEFAULT_CATEGORY, 'name'): exp.name,
             (DEFAULT_CATEGORY, 'status'): exp.status,
-            (DEFAULT_CATEGORY, 'scheduler'): exp.SCHEDULER_NAME,
+            (DEFAULT_CATEGORY, 'scheduler'): exp._SCHEDULER_NAME,
         }
         if isinstance(exp, schedy.RandomSearch):
             for name, dist in exp.distributions.items():
-                row[('hyperparameter', name)] = '{} ({})'.format(dist.FUNC_NAME, json.dumps(dist._args(), cls=schedy.encoding.SchedyJSONEncoder))
+                row[('hyperparameter', name)] = '{} ({})'.format(dist._FUNC_NAME, json.dumps(dist._args(), cls=schedy.encoding.SchedyJSONEncoder))
         data.add_row(row)
     return data
 

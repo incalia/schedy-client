@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .experiments import Experiment, RandomSearch, ManualSearch, _make_experiment
+from .experiments import Experiment, RandomSearch, ManualSearch, PopulationBasedTraining, _make_experiment
 from .jwt import JWTTokenAuth
 from .pagination import PageObjectsIterator
 from . import errors, encoding
@@ -49,7 +49,7 @@ class SchedyDB(object):
         self._jwt_expiration = datetime.datetime(year=1970, month=1, day=1)
         self._session = None
 
-    def authenticate(self):
+    def _authenticate(self):
         '''
         Renew authentication. You do not usually need to call this function, as
         it will always be called automatically when needed.
@@ -139,20 +139,21 @@ class SchedyDB(object):
             obj_creation_func=functools.partial(_make_experiment, self),
         )
 
-    def register_scheduler(self, experiment_type):
+    def _register_scheduler(self, experiment_type):
         '''
         Registers a new type of experiment. You should never have to use this
         function yourself.
 
         Args:
             experiment_type (class): Type of the experiment, it must have an
-                attribute called SCHEDULER_NAME.
+                attribute called _SCHEDULER_NAME.
         '''
-        self._schedulers[experiment_type.SCHEDULER_NAME] = experiment_type
+        self._schedulers[experiment_type._SCHEDULER_NAME] = experiment_type
 
     def _register_default_schedulers(self):
-        self.register_scheduler(RandomSearch)
-        self.register_scheduler(ManualSearch)
+        self._register_scheduler(RandomSearch)
+        self._register_scheduler(ManualSearch)
+        self._register_scheduler(PopulationBasedTraining)
 
     def _all_experiments_url(self):
         return urljoin(self.root, 'experiments/')
@@ -184,7 +185,7 @@ class SchedyDB(object):
         response = None
         for _ in range(NUM_AUTH_RETRIES):
             if self._jwt_token is None or self._jwt_token.expires_soon():
-                self.authenticate()
+                self._authenticate()
             response = self._perform_request(*args, auth=self._jwt_token, **kwargs)
             if response.status_code != requests.codes.unauthorized:
                 break
