@@ -37,14 +37,9 @@ repetitive tasks.
 Installation and setup
 ----------------------
 
-Install Schedy::
+`Sign up here <https://schedy.io>`_, install Schedy & get your API token::
 
    pip3 install schedy
-
-`Sign up for free <https://schedy.io>`_
-
-Get your API token::
-
    schedy gen-token
 
 You are now ready to :doc:`get started </getting_started>`!
