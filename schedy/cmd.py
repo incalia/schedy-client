@@ -146,7 +146,7 @@ def setup_push(subparsers):
     parser.add_argument('-p', '--hyperparameters', nargs='+', required=True, help='Hyperparameters for the job. Each hyperparameter must be provided as a pair: name value. value must be a valid JSON value. For example: -p learning_rate 0.01 num_layers 3 size_layers \'[512, 1024, 512]\'')
     parser.set_defaults(parser=parser)
 
-def cmd_push(db, args):
+def cmd_push(args):
     db = schedy.SchedyDB(config_path=args.config)
     kwargs = dict()
     # Status, quality
