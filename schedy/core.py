@@ -14,10 +14,24 @@ from urllib.parse import quote as urlquote
 from urllib.parse import urljoin
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-Retry.BACKOFF_MAX = 8 * 60
 import logging
 
 logger = logging.getLogger(__name__)
+
+class SchedyRetry(Retry):
+    BACKOFF_MAX = 8 * 60
+
+    def increment(self, method=None, url=None, response=None, error=None, *args, **kwargs):
+        logger.warn('Error while querying Schedy service, retrying.')
+        if response is not None:
+            logger.warn('Server message: {!s}'.format(response.data))
+        return super().increment(
+            method=method,
+            url=url,
+            response=response,
+            error=error,
+            *args,
+            **kwargs)
 
 #: Number of retries if the authentication fails.
 NUM_AUTH_RETRIES = 2
@@ -192,7 +206,7 @@ class SchedyDB(object):
 
     def _make_session(self):
         self._session = requests.Session()
-        retry_mgr = Retry(
+        retry_mgr = SchedyRetry(
                 total=10,
                 read=10,
                 connect=10,
