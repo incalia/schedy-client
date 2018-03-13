@@ -33,7 +33,7 @@ setup(
     ],
     project_urls={
         'Homepage': 'https://schedy.io/',
-        'Source': 'https://github.com/incalia/',
+        'Source': 'https://github.com/incalia/schedy-client/',
         'Documentation': 'https://schedy.readthedocs.io/en/latest/',
     },
 )
