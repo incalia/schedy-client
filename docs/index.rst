@@ -24,13 +24,14 @@ becomes as simple as this::
       with exp.next_job() as job:
          my_train_function(job)
 
-You can follow the evolution of your experiment thanks to our `online dashboard
+You can follow the evolution of your experiments thanks to our `online dashboard
 <https://schedy.io>`_.
 
-.. todo:: Add image of dashboard
+.. image:: images/dashboard.png
+  :align: center
 
 We also provide a command line tool, that will help you with the most
-repetitive tasks.
+common tasks.
 
 .. _setup:
 
