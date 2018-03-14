@@ -224,6 +224,7 @@ def cmd_gen_token(args):
             pass
     with open(config_path, 'w') as config_file:
         json.dump(new_content, config_file, cls=schedy.encoding.SchedyJSONEncoder)
+    print('Your token has been saved to {}.'.format(config_path))
 
 def main():
     parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')
