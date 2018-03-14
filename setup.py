@@ -4,8 +4,9 @@ from setuptools import setup
 
 setup(
     name='Schedy',
-    version='0.1.0b1',
+    version='0.1.0b2',
     description='Python client for Schedy',
+    long_description=open('README.rst').read(),
     author='Incalia',
     author_email='nathan@incalia.fr',
     url='https://schedy.io/',
