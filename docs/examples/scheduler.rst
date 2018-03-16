@@ -14,6 +14,15 @@ y^2``. First, we will create an experiment.
 
     schedy add MinimizeManual manual
 
+... or, in Python::
+
+    import schedy
+
+    db = schedy.SchedyDB()
+    experiment = schedy.ManualSearch('MinimizeManual')
+    db.add_experiment(experiment)
+
+
 Let's create a worker using the Schedy Python API.
 
 ::
@@ -36,7 +45,7 @@ Let's create a worker using the Schedy Python API.
 
 As you can see, this is just a script that pulls jobs from Schedy, computes the
 results, and pushes the jobs back to Schedy. In case of crash it will just keep
-on trying. Here's a quick explanation of it in more detail:
+on trying. Here's a quick explanation of it in more details:
 
 ::
 
@@ -62,8 +71,8 @@ infinite loop in which we'll handle incoming jobs.
 We pull the next job, and start working on it. The ``with`` statement is there so
 that we always report to Schedy whether the job has crashed or succeeded. The
 results will only be pushed to Schedy at the end of the ``with`` statement. If you
-wanted to report intermediary results to Schedy before the ``with`` statement
-end, you could call ``job.put()``.
+wanted to report intermediary results to Schedy before the end of the``with``
+statement, you could call ``job.put()``.
 
 ::
 
@@ -81,7 +90,6 @@ printing errors like this one:
 .. code-block:: none
 
     HTTP Error None:
-    
     > No job left for experiment MinimizeManual.
 
 This is fine, as you do not have enqueued any job to your experiment
@@ -94,30 +102,35 @@ Let's ask the worker to compute the result using ``x = 1`` and ``y = 2``.
 
     schedy push MinimizeManual -p x 1 y 2
 
+... or, in Python::
+
+    import schedy
+
+    db = schedy.SchedyDB()
+    experiment = db.get_experiment('MinimizeManual')
+    job = experiment.add_job(hyperparameters={'x': 1, 'y': 2})
+
 After at most 60 seconds, the worker should have computed the result and
 reported back. You can see the result using:
 
 .. code-block:: bash
 
-    schedy list -p MinimizeManual
+    schedy list -t MinimizeManual
     # Or, if you only want to see the results of the job you just pushed instead of the whole list:
-    schedy show MinimizeManual <job-id>
+    # schedy show MinimizeManual <job-id>
 
 *The id of the job was given to you when you pushed it. It is a sequence of
-random characters that should look like this: fVKGjg.*
+random characters that should look like this: ExhnhQ.*
 
 You should see something like this:
 
 .. code-block:: none
 
-    Id: fVKGjg
-    Status: DONE
-    Quality: 0.0
-    Hyperparameters:
-     - x: 1
-     - y: 2
-    Results:
-     - result: 5
+    +--------+----------+-----------+-----+-----+----------+
+    | id     | status   |   quality |   x |   y |   result |
+    |--------+----------+-----------+-----+-----+----------|
+    | ExhnhQ | DONE     |         0 |   1 |   2 |        5 |
+    +--------+----------+-----------+-----+-----+----------+
 
 If you don't, and the status is still ``QUEUED``, just wait a few seconds until
 the worker pulls the experiment.

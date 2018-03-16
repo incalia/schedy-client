@@ -14,54 +14,39 @@ Schedy can do useful things for you:
   your task.
 
 And all of that in just a few lines of code! Coordinating a cluster of workers
-becomes as simple as this::
+becomes as simple as this:
+
+.. code-block:: python
 
    import schedy
 
    db = schedy.SchedyDB()
-   experiment = db.get_experiment('My Task')
+   exp = db.get_experiment('My Task')
    while True:
-      with experiment.next_job() as job:
+      with exp.next_job() as job:
          my_train_function(job)
 
 You can follow the evolution of your experiments thanks to our `online dashboard
-<https://schedy.io>`_.
+<https://schedy.io/>`_.
 
-.. image:: images/dashboard.png
+.. image:: docs/images/dashboard.png
   :align: center
 
 We also provide a command line tool, that will help you with the most
-common tasks.
+repetitive tasks.
 
 .. _setup:
 
 Installation and setup
 ----------------------
 
-`Sign up here <https://schedy.io>`_, install Schedy & get your API token::
+`Sign up here <https://schedy.io>`_, install Schedy & get your API token:
+
+.. code-block:: bash
 
    pip3 install schedy
    schedy gen-token
 
-You are now ready to :doc:`get started </getting_started>`!
+You are now ready to `get started <https://schedy.readthedocs.io/en/latest/getting_started.html>`_!
 
-.. toctree::
-   :hidden:
-   :maxdepth: 2
-
-   Homepage <self>
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   getting_started
-   examples
-   reference
-   faq
-
-Other
------
-
-* :ref:`Alphabetical index <genindex>`
-* :ref:`Modules index <modindex>`
+You can also read the `API reference <https://schedy.readthedocs.io/en/latest/reference.html>`_.

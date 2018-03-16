@@ -20,8 +20,8 @@ the same as running the following Python script::
    import schedy
 
    db = schedy.SchedyDB()
-   exp = schedy.ManualSearch('MyTask')
-   db.add_experiment(exp)
+   experiment = schedy.ManualSearch('MyTask')
+   db.add_experiment(experiment)
 
 Database, experiments and jobs
 ------------------------------
