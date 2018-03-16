@@ -29,7 +29,7 @@ becomes as simple as this:
 You can follow the evolution of your experiments thanks to our `online dashboard
 <https://schedy.io/>`_.
 
-.. image:: images/dashboard.png
+.. image:: docs/images/dashboard.png
   :align: center
 
 We also provide a command line tool, that will help you with the most
