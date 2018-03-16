@@ -17,8 +17,8 @@ that minimize ``x^2 * y^2``. First, you would create an experiment in Schedy:
     import schedy
 
     db = schedy.SchedyDB()
-    exp = schedy.ManualSearch('MinimizeSimple')
-    db.add_experiment(exp)
+    experiment = schedy.ManualSearch('MinimizeSimple')
+    db.add_experiment(experiment)
 
 This creates a new experiment called *MinimizeSimple*. The keyword *manual*
 tells Schedy that you are going to manage the jobs of this experiment yourself.
@@ -40,8 +40,8 @@ obtained.
     import schedy
 
     db = schedy.SchedyDB()
-    exp = db.get_experiment('MinimizeSimple')
-    job = exp.add_job(
+    experiment = db.get_experiment('MinimizeSimple')
+    job = experiment.add_job(
         status=schedy.Job.DONE,
         hyperparameters={
             'x': 1,
@@ -124,8 +124,8 @@ Note that you can also access all these values using the Python API::
     import schedy
 
     db = schedy.SchedyDB()
-    exp = db.get_experiment('MinimizeSimple')
-    for job in exp.all_jobs():
+    experiment = db.get_experiment('MinimizeSimple')
+    for job in experiment.all_jobs():
         print('Id:', job.job_id)
         print('Status:', job.status)
         print('Quality', job.quality)

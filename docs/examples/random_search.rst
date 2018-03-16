@@ -25,14 +25,27 @@ follow a normal distribution, centered around *0* with a standard deviation of
 
     schedy add MinimizeRandom random x normal '{"mean": 0, "std": 5}' y normal '{"mean": 0, "std": 2}'
 
+... or, in Python::
+
+    import schedy
+
+    db = schedy.SchedyDB()
+    distributions = {
+        'x': schedy.random.Normal(0, 5),
+        'y': schedy.random.Normal(0, 2),
+    }
+    experiment = schedy.RandomSearch('MinimizeRandom', distributions)
+    db.add_experiment(experiment)
+
 As you can see, we're using a ``random`` scheduler this time, instead of a
 ``manual`` one. And we're defining the random variables immediately after this.
 The parameters of each distribution are supplied using JSON notation. We'll
-talk more about the supported distributions [later](#available-distributions).
+talk more about the supported distributions :ref:`later <available_distributions>`.
 
-The worker file does not change much.
+The worker file does not change much::
 
-::
+    import schedy
+    import time
 
     db = schedy.SchedyDB()
     experiment = db.get_experiment('MinimizeRandom')
@@ -41,7 +54,6 @@ The worker file does not change much.
             with experiment.next_job() as job:
                 x = job.hyperparameters['x']
                 y = job.hyperparameters['y']
-                time.sleep(10) # Simulate computing time
                 result = x ** 2 + y ** 2
                 job.results['result'] = result
         except Exception as e:
@@ -51,47 +63,45 @@ The worker file does not change much.
 
 As you can see all we changed was the name of the experiment. We also changed
 the infinite loop to a finite loop, because the random search scheduler will
-continuously send new jobs to us. We wouldn't want to spam the Schedy database
-with millions of jobs just because we're able to compute a result in a few
-nanoseconds, right?
+continuously send new jobs to us. Because we are able to perform a task in a
+few nanoseconds, an infinite loop would create several thousand jobs per second
+and spam the database (remember, we're not trying to optimize a neural network
+here, we're just minimizing ``x^2 + y^2``).
 
 Once again, you can start the worker, then list your results using:
 
 .. code-block:: bash
 
-    schedy list -p MinimizeRandom
+    schedy list -t MinimizeRandom
 
 .. code-block:: none
 
-    Id: E4wM_Q
-    Status: DONE
-    Quality: 0.0
-    Hyperparameters:
-     - x: 0.7631796730117579
-     - y: 1.7928643416416767
-    Results:
-     - result: 3.7968057608285766
+    +--------+----------+-----------+------------+------------+-----------+
+    | id     | status   |   quality |          x |          y |    result |
+    |--------+----------+-----------+------------+------------+-----------|
+    | 2WDn_w | DONE     |         0 |  -0.836867 | -0.71981   |   1.21847 |
+    | m4hoTw | DONE     |         0 |  -1.15003  | -0.83331   |   2.01698 |
+    | l26a6g | DONE     |         0 |   0.862245 |  1.27614   |   2.372   |
+    | ZDmNqw | DONE     |         0 |  -2.52887  |  0.429102  |   6.57931 |
+    | LMEOaQ | DONE     |         0 |   2.86853  | -0.742761  |   8.78014 |
+    | iKCzuw | DONE     |         0 |   2.47215  |  1.95058   |   9.91631 |
+    | E6K6Ew | DONE     |         0 |  -2.90947  |  1.81924   |  11.7746  |
+    | hRaPOQ | DONE     |         0 |   2.63032  |  3.00305   |  15.9369  |
+    | Tby5Og | DONE     |         0 |  -3.68871  |  1.66496   |  16.3787  |
+    | b0pp7g | DONE     |         0 |   1.76621  |  4.14727   |  20.3194  |
+    | NZQw7w | DONE     |         0 |   4.92685  |  0.71905   |  24.7909  |
+    | sMUVuA | DONE     |         0 |   5.58645  |  1.50509   |  33.4737  |
+    | zLxjYA | DONE     |         0 |   6.70355  |  0.0705488 |  44.9426  |
+    | hDi9uw | DONE     |         0 |  -6.75093  |  1.57475   |  48.0549  |
+    | oMcmeQ | DONE     |         0 |  -7.17896  |  0.100174  |  51.5475  |
+    | fF8NHQ | DONE     |         0 |   7.20394  |  0.692157  |  52.3758  |
+    | tKwlHw | DONE     |         0 |   9.02237  |  0.156419  |  81.4276  |
+    | m9G7GA | DONE     |         0 |   8.18227  |  3.95599   |  82.5994  |
+    | 7MgmuA | DONE     |         0 |  10.0929   | -2.78685   | 109.634   |
+    | l8L6xQ | DONE     |         0 | -10.6514   | -0.970788  | 114.395   |
+    +--------+----------+-----------+------------+------------+-----------+
 
-    Id: HeoaOw
-    Status: DONE
-    Quality: 0.0
-    Hyperparameters:
-     - y: 0.4081494909274223
-     - x: -7.726479873690085
-    Results:
-     - result: 59.86507724548227
-
-    Id: UdbGfQ
-    Status: RUNNING
-    Quality: 0.0
-    Hyperparameters:
-     - y: -1.0508884097470883
-     - x: 6.625251239195508
-    ...
-
-As you can see, since I launched this while the worker was still running, one
-of my jobs has the status "RUNNING" (and no result). This is the job that is
-currently being processed by the worker.
+.. _available_distributions:
 
 Available distributions
 -----------------------

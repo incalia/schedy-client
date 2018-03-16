@@ -19,9 +19,9 @@ becomes as simple as this::
    import schedy
 
    db = schedy.SchedyDB()
-   exp = db.get_experiment('My Task')
+   experiment = db.get_experiment('My Task')
    while True:
-      with exp.next_job() as job:
+      with experiment.next_job() as job:
          my_train_function(job)
 
 You can follow the evolution of your experiments thanks to our `online dashboard
@@ -58,6 +58,7 @@ You are now ready to :doc:`get started </getting_started>`!
    getting_started
    examples
    reference
+   faq
 
 Other
 -----

@@ -27,7 +27,7 @@ class Experiment(object):
         Base-class for all experiments.
 
         Args:
-            name (str): Name of the experiment. An experience is uniquely
+            name (str): Name of the experiment. An experiment is uniquely
                 identified by its name.
             status (str): Status of the experiment. See :ref:`experiment_status`
         '''
@@ -228,7 +228,7 @@ class RandomSearch(Experiment):
         all the parameters specified in the ``distributions`` parameter.
 
         Args:
-            name (str): Name of the experiment. An experience is uniquely
+            name (str): Name of the experiment. An experiment is uniquely
                 identified by its name.
             distributions (dict): A dictionary of distributions (see
                 :py:mod:`schedy.random`), whose keys are the names of the
@@ -265,7 +265,7 @@ def _make_experiment(db, data):
     try:
         exp_data = dict(data)
     except ValueError as e:
-        raise errors.UnhandledResponseError('Expected experience data as a dict, received {}.'.format(type(data)), None) from e
+        raise errors.UnhandledResponseError('Expected experiment data as a dict, received {}.'.format(type(data)), None) from e
     try:
         exp = Experiment._from_map_definition(db._schedulers, exp_data)
     except ValueError as e:

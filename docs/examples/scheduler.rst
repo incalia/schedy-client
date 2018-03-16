@@ -19,8 +19,8 @@ y^2``. First, we will create an experiment.
     import schedy
 
     db = schedy.SchedyDB()
-    exp = schedy.ManualSearch('MinimizeManual')
-    db.add_experiment(exp)
+    experiment = schedy.ManualSearch('MinimizeManual')
+    db.add_experiment(experiment)
 
 
 Let's create a worker using the Schedy Python API.
@@ -107,8 +107,8 @@ Let's ask the worker to compute the result using ``x = 1`` and ``y = 2``.
     import schedy
 
     db = schedy.SchedyDB()
-    exp = db.get_experiment('MinimizeManual')
-    job = exp.add_job(hyperparameters={'x': 1, 'y': 2})
+    experiment = db.get_experiment('MinimizeManual')
+    job = experiment.add_job(hyperparameters={'x': 1, 'y': 2})
 
 After at most 60 seconds, the worker should have computed the result and
 reported back. You can see the result using:
