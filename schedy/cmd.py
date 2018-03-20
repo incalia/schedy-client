@@ -8,6 +8,7 @@ from tabulate import tabulate
 import getpass
 from urllib.parse import urljoin
 import os
+import stat
 
 DEFAULT_CATEGORY = 'schedy'
 
@@ -224,6 +225,10 @@ def cmd_gen_token(args):
             pass
     with open(config_path, 'w') as config_file:
         json.dump(new_content, config_file, cls=schedy.encoding.SchedyJSONEncoder)
+    try:
+        os.chmod(config_path, stat.S_IRUSR | stat.S_IWUSR)
+    except OSError:
+        print('Token file permissions could not be set.')
     print('Your token has been saved to {}.'.format(config_path))
 
 def main():
