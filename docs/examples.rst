@@ -13,3 +13,4 @@ make the API as clear as possible.
    examples/database
    examples/scheduler
    examples/random_search
+   examples/pbt
