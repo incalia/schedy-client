@@ -42,7 +42,6 @@ class Experiment(object):
         Args:
             hyperparameters (dict): A dictionnary of hyperparameters values.
             status (str): Job status. See :ref:`job_status`. Default: QUEUED.
-            quality (float): Quality of this job. Default: 0.
             results (dict): A dictionnary of result values. Default: No results (empty dictionary).
 
         Returns:

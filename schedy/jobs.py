@@ -16,7 +16,7 @@ class Job(object):
     #: Status of a completed job.
     DONE = 'DONE'
 
-    def __init__(self, job_id, experiment, hyperparameters, status=QUEUED, quality=0, results=None, etag=None):
+    def __init__(self, job_id, experiment, hyperparameters, status=QUEUED, results=None, etag=None):
         '''
         Represents a job instance belonging to an experiment. You should not
         need to create it by hand. Use :py:meth:`schedy.Experiment.add_job`,
@@ -36,7 +36,6 @@ class Job(object):
             experiment (schedy.Experiment): Experiment containing this job.
             hyperparameters (dict): A dictionnary of hyperparameters values.
             status (str): Job status. See :ref:`job_status`
-            quality (float): Quality of this job.
             results (dict): A dictionnary of results values.
             etag (str): Value of the entity tag sent by the backend.
         '''
@@ -45,7 +44,6 @@ class Job(object):
         self.status = status
         self.hyperparameters = hyperparameters
         self.results = results
-        self.quality = quality
         self.etag = etag
 
     def __str__(self):
@@ -150,7 +148,6 @@ class Job(object):
             job_id = str(map_def['id'])
             experiment_name = str(map_def['experiment'])
             status = str(map_def['status'])
-            quality = float(map_def['quality'])
             hyperparameters = map_def.get('hyperparameters')
             if hyperparameters is not None:
                 hyperparameters = dict(hyperparameters)
@@ -172,14 +169,12 @@ class Job(object):
                 experiment=experiment,
                 status=status,
                 hyperparameters=hyperparameters,
-                quality=quality,
                 results=results,
                 etag=etag)
 
     def _to_map_definition(self):
         map_def = {
                 'status': str(self.status),
-                'quality': float(self.quality),
             }
         if len(self.hyperparameters) > 0:
             map_def['hyperparameters'] = self.hyperparameters

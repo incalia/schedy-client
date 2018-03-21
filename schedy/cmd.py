@@ -142,7 +142,6 @@ def setup_push(subparsers):
     parser.set_defaults(func=cmd_push)
     parser.add_argument('experiment', help='Name of the experiment for the job.')
     parser.add_argument('-s', '--status', choices=(schedy.Job.QUEUED, schedy.Job.RUNNING, schedy.Job.DONE, schedy.Job.CRASHED), help='Status of the job.')
-    parser.add_argument('-q', '--quality', type=float, help='Quality of the solution found by the job.')
     parser.add_argument('-r', '--results', nargs='+', help='Optional results for the job. Each result must be provided as a pair: name value. value must be a valid JSON value. For example: -r accuracy 0.9 loss_history \'[0.9, 0.8, 0.7]\'')
     parser.add_argument('-p', '--hyperparameters', nargs='+', required=True, help='Hyperparameters for the job. Each hyperparameter must be provided as a pair: name value. value must be a valid JSON value. For example: -p learning_rate 0.01 num_layers 3 size_layers \'[512, 1024, 512]\'')
     parser.set_defaults(parser=parser)
@@ -150,11 +149,9 @@ def setup_push(subparsers):
 def cmd_push(args):
     db = schedy.SchedyDB(config_path=args.config)
     kwargs = dict()
-    # Status, quality
+    # Status
     if args.status is not None:
         kwargs['status'] = args.status
-    if args.quality is not None:
-        kwargs['quality'] = args.quality
     # Results
     if args.results is not None:
         if len(args.results) % 2 != 0:
@@ -363,7 +360,6 @@ def job_table(jobs):
         row = {
             (DEFAULT_CATEGORY, 'id'): job.job_id,
             (DEFAULT_CATEGORY, 'status'): job.status,
-            (DEFAULT_CATEGORY, 'quality'): job.quality,
         }
         for name, value in job.hyperparameters.items():
             row[('hyperparameter', name)] = value
