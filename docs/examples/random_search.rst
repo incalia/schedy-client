@@ -111,7 +111,8 @@ have a lot of impact. But in practice, the distributions you choose for your
 hyperparameters could change how fast you find a good solution.
 
 In order to help you in this regard, Schedy offers several type of
-distributions:
+distributions. The following is a short description of these distributions (see
+also: :doc:`API reference </reference/random>`).
 
 Uniform distribution
 ^^^^^^^^^^^^^^^^^^^^

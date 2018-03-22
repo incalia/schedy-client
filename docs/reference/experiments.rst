@@ -33,6 +33,8 @@ Random search
     :members:
     :undoc-members:
 
+.. _pbt_experiment:
+
 Population Based Training
 -------------------------
 
