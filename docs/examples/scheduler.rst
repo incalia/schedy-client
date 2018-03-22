@@ -1,6 +1,9 @@
 Schedy as a scheduler
 =====================
 
+*The scripts created in this tutorial can be found in our* `GitHub repository
+<https://github.com/incalia/schedy-client/tree/master/examples/scheduler>`_ .
+
 Schedy was primarily designed to be used as a scheduler, that is to say a
 service that orchestrates a cluster of workers by telling them which
 hyperparameters to try. The simplest way to do that is by creating a queue of
@@ -126,11 +129,11 @@ You should see something like this:
 
 .. code-block:: none
 
-    +--------+----------+-----------+-----+-----+----------+
-    | id     | status   |   quality |   x |   y |   result |
-    |--------+----------+-----------+-----+-----+----------|
-    | ExhnhQ | DONE     |         0 |   1 |   2 |        5 |
-    +--------+----------+-----------+-----+-----+----------+
+    +--------+----------+-----+-----+----------+
+    | id     | status   |   x |   y |   result |
+    |--------+----------+-----+-----+----------|
+    | ExhnhQ | DONE     |   1 |   2 |        5 |
+    +--------+----------+-----+-----+----------+
 
 If you don't, and the status is still ``QUEUED``, just wait a few seconds until
 the worker pulls the experiment.

@@ -1,6 +1,9 @@
 Using Schedy as a database
 ==========================
 
+*The scripts created in this tutorial can be found in our* `GitHub repository
+<https://github.com/incalia/schedy-client/tree/master/examples/database>`_ .
+
 Schedy can be used as a simple database to store experiments. Schedy has two
 main concepts: experiments, and jobs. An experiment is a set of jobs, each job
 being a *trial* for its experiment.
@@ -90,31 +93,31 @@ However, if you want to do it using the command line, you can run:
 
 .. code-block:: none
 
-    +--------+----------+-----------+----------+------------+-----------+
-    | id     | status   |   quality |        x |          y |    result |
-    |--------+----------+-----------+----------+------------+-----------|
-    | -bPmlQ | DONE     |         0 |  15.0542 |   3.27561  |   237.36  |
-    | 06wn6w | DONE     |         0 |  27.7519 |   0.301546 |   770.257 |
-    | 0jjY2Q | DONE     |         0 |  95.2792 |  36.0534   | 10378     |
-    | 5Jz0hA | DONE     |         0 | -60.2291 | -19.56     |  4010.13  |
-    | 8_7e5Q | DONE     |         0 |  24.3572 |  19.2384   |   963.389 |
-    | IOHsSw | DONE     |         0 | -82.2053 | -82.4315   | 13552.7   |
-    | M4m6CA | DONE     |         0 | -66.6737 |  41.7379   |  6187.44  |
-    | MQmuTw | DONE     |         0 |  27.3775 | -31.1913   |  1722.43  |
-    | NavIrw | DONE     |         0 |   1      |   2        |     5     |
-    | NiHt6A | DONE     |         0 |  79.5122 | -74.5573   | 11881     |
-    | OP7aGw | DONE     |         0 | -12.5107 |  -0.683612 |   156.985 |
-    | Wjz2Wg | DONE     |         0 |  81.5054 | -66.08     | 11009.7   |
-    | ZM3nww | DONE     |         0 |  66.9189 | -52.3469   |  7218.33  |
-    | b6T0TA | DONE     |         0 |  70.9641 | -70.5859   | 10018.3   |
-    | csui0g | DONE     |         0 |  71.7953 |  49.0019   |  7555.74  |
-    | gRjRQA | DONE     |         0 | -47.0694 | -25.1969   |  2850.42  |
-    | gqfFQg | DONE     |         0 | -35.5846 | -46.4451   |  3423.41  |
-    | m0f9vA | DONE     |         0 | -80.614  | -72.4938   | 11754     |
-    | mL2NXw | DONE     |         0 |  18.0392 | -13.1687   |   498.828 |
-    | n8tNMQ | DONE     |         0 |  77.8921 |  80.532    | 12552.6   |
-    | yFvyFQ | DONE     |         0 | -41.0681 |  96.7539   | 11047.9   |
-    +--------+----------+-----------+----------+------------+-----------+
+    +--------+----------+----------+------------+-----------+
+    | id     | status   |        x |          y |    result |
+    |--------+----------+----------+------------+-----------|
+    | -bPmlQ | DONE     |  15.0542 |   3.27561  |   237.36  |
+    | 06wn6w | DONE     |  27.7519 |   0.301546 |   770.257 |
+    | 0jjY2Q | DONE     |  95.2792 |  36.0534   | 10378     |
+    | 5Jz0hA | DONE     | -60.2291 | -19.56     |  4010.13  |
+    | 8_7e5Q | DONE     |  24.3572 |  19.2384   |   963.389 |
+    | IOHsSw | DONE     | -82.2053 | -82.4315   | 13552.7   |
+    | M4m6CA | DONE     | -66.6737 |  41.7379   |  6187.44  |
+    | MQmuTw | DONE     |  27.3775 | -31.1913   |  1722.43  |
+    | NavIrw | DONE     |   1      |   2        |     5     |
+    | NiHt6A | DONE     |  79.5122 | -74.5573   | 11881     |
+    | OP7aGw | DONE     | -12.5107 |  -0.683612 |   156.985 |
+    | Wjz2Wg | DONE     |  81.5054 | -66.08     | 11009.7   |
+    | ZM3nww | DONE     |  66.9189 | -52.3469   |  7218.33  |
+    | b6T0TA | DONE     |  70.9641 | -70.5859   | 10018.3   |
+    | csui0g | DONE     |  71.7953 |  49.0019   |  7555.74  |
+    | gRjRQA | DONE     | -47.0694 | -25.1969   |  2850.42  |
+    | gqfFQg | DONE     | -35.5846 | -46.4451   |  3423.41  |
+    | m0f9vA | DONE     | -80.614  | -72.4938   | 11754     |
+    | mL2NXw | DONE     |  18.0392 | -13.1687   |   498.828 |
+    | n8tNMQ | DONE     |  77.8921 |  80.532    | 12552.6   |
+    | yFvyFQ | DONE     | -41.0681 |  96.7539   | 11047.9   |
+    +--------+----------+----------+------------+-----------+
 
 We are pretty far from the optimal result, but that's normal considering
 we tried only 20 combinations of hyperparameters.
@@ -128,7 +131,6 @@ Note that you can also access all these values using the Python API::
     for job in experiment.all_jobs():
         print('Id:', job.job_id)
         print('Status:', job.status)
-        print('Quality', job.quality)
         print('Hyperparameters:')
         for name, value in job.hyperparameters.items():
             print('- {}: {}'.format(name, value))
@@ -153,31 +155,31 @@ Well of course! He're how you would do it:
 
 .. code-block:: none
 
-    +--------+----------+-----------+----------+------------+-----------+
-    | id     | status   |   quality |        x |          y |    result |
-    |--------+----------+-----------+----------+------------+-----------|
-    | NavIrw | DONE     |         0 |   1      |   2        |     5     |
-    | OP7aGw | DONE     |         0 | -12.5107 |  -0.683612 |   156.985 |
-    | -bPmlQ | DONE     |         0 |  15.0542 |   3.27561  |   237.36  |
-    | mL2NXw | DONE     |         0 |  18.0392 | -13.1687   |   498.828 |
-    | 06wn6w | DONE     |         0 |  27.7519 |   0.301546 |   770.257 |
-    | 8_7e5Q | DONE     |         0 |  24.3572 |  19.2384   |   963.389 |
-    | MQmuTw | DONE     |         0 |  27.3775 | -31.1913   |  1722.43  |
-    | gRjRQA | DONE     |         0 | -47.0694 | -25.1969   |  2850.42  |
-    | gqfFQg | DONE     |         0 | -35.5846 | -46.4451   |  3423.41  |
-    | 5Jz0hA | DONE     |         0 | -60.2291 | -19.56     |  4010.13  |
-    | M4m6CA | DONE     |         0 | -66.6737 |  41.7379   |  6187.44  |
-    | ZM3nww | DONE     |         0 |  66.9189 | -52.3469   |  7218.33  |
-    | csui0g | DONE     |         0 |  71.7953 |  49.0019   |  7555.74  |
-    | b6T0TA | DONE     |         0 |  70.9641 | -70.5859   | 10018.3   |
-    | 0jjY2Q | DONE     |         0 |  95.2792 |  36.0534   | 10378     |
-    | Wjz2Wg | DONE     |         0 |  81.5054 | -66.08     | 11009.7   |
-    | yFvyFQ | DONE     |         0 | -41.0681 |  96.7539   | 11047.9   |
-    | m0f9vA | DONE     |         0 | -80.614  | -72.4938   | 11754     |
-    | NiHt6A | DONE     |         0 |  79.5122 | -74.5573   | 11881     |
-    | n8tNMQ | DONE     |         0 |  77.8921 |  80.532    | 12552.6   |
-    | IOHsSw | DONE     |         0 | -82.2053 | -82.4315   | 13552.7   |
-    +--------+----------+-----------+----------+------------+-----------+
+    +--------+----------+----------+------------+-----------+
+    | id     | status   |        x |          y |    result |
+    |--------+----------+----------+------------+-----------|
+    | NavIrw | DONE     |   1      |   2        |     5     |
+    | OP7aGw | DONE     | -12.5107 |  -0.683612 |   156.985 |
+    | -bPmlQ | DONE     |  15.0542 |   3.27561  |   237.36  |
+    | mL2NXw | DONE     |  18.0392 | -13.1687   |   498.828 |
+    | 06wn6w | DONE     |  27.7519 |   0.301546 |   770.257 |
+    | 8_7e5Q | DONE     |  24.3572 |  19.2384   |   963.389 |
+    | MQmuTw | DONE     |  27.3775 | -31.1913   |  1722.43  |
+    | gRjRQA | DONE     | -47.0694 | -25.1969   |  2850.42  |
+    | gqfFQg | DONE     | -35.5846 | -46.4451   |  3423.41  |
+    | 5Jz0hA | DONE     | -60.2291 | -19.56     |  4010.13  |
+    | M4m6CA | DONE     | -66.6737 |  41.7379   |  6187.44  |
+    | ZM3nww | DONE     |  66.9189 | -52.3469   |  7218.33  |
+    | csui0g | DONE     |  71.7953 |  49.0019   |  7555.74  |
+    | b6T0TA | DONE     |  70.9641 | -70.5859   | 10018.3   |
+    | 0jjY2Q | DONE     |  95.2792 |  36.0534   | 10378     |
+    | Wjz2Wg | DONE     |  81.5054 | -66.08     | 11009.7   |
+    | yFvyFQ | DONE     | -41.0681 |  96.7539   | 11047.9   |
+    | m0f9vA | DONE     | -80.614  | -72.4938   | 11754     |
+    | NiHt6A | DONE     |  79.5122 | -74.5573   | 11881     |
+    | n8tNMQ | DONE     |  77.8921 |  80.532    | 12552.6   |
+    | IOHsSw | DONE     | -82.2053 | -82.4315   | 13552.7   |
+    +--------+----------+----------+------------+-----------+
 
 Once you are done, you can remove the experiment, so that it does not appear in
 your listings later, as this is just an experiment for the tutorial.

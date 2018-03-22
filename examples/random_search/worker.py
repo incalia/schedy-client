@@ -16,7 +16,6 @@ for i in range(20):
         with experiment.next_job() as job:
             x = job.hyperparameters['x']
             y = job.hyperparameters['y']
-            time.sleep(10) # Simulate computing time
             result = x ** 2 + y ** 2
             job.results['result'] = result
     # Catch any type of exception so that the worker never crashes

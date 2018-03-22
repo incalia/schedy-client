@@ -4,7 +4,11 @@ Population Based Training
 This example shows how to use Population Based Training to optimize a Convolutional Neural Network to 
 perform image classification on the MNIST dataset.
 
-How do I run it?
+(See the `associated tutorial
+<http://schedy.readthedocs.io/en/latest/examples/pbt.html>`_ for more
+information.)
+
+How do I run this example?
 ----------------
 
 The following commands will train 50 jobs:
