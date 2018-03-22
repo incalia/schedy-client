@@ -17,5 +17,5 @@ The following commands will train 50 jobs:
 Files
 -----
 
-- `create_experiment.py <pbt/create_experiment.py>`_: Create and configure a PBT experiment.
-- `keras_worker.py <pbt/keras_worker.py>`_: Worker for this experiment, implemented using `Keras <https://keras.io/>`_.
+- `create_experiment.py <create_experiment.py>`_: Create and configure a PBT experiment.
+- `keras_worker.py <keras_worker.py>`_: Worker for this experiment, implemented using `Keras <https://keras.io/>`_.
