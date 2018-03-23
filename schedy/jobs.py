@@ -4,7 +4,7 @@ import json
 from . import errors, encoding
 
 def _check_status(status):
-    return status in (Job.QUEUED, Job.RUNNING, Job.CRASHED, Job.DONE)
+    return status in (Job.QUEUED, Job.RUNNING, Job.CRASHED, Job.PRUNED, Job.DONE)
 
 class Job(object):
     #: Status of a queued job. Queued jobs are returned when calling :py:meth:`schedy.Experiment.next_job`.
@@ -13,6 +13,8 @@ class Job(object):
     RUNNING = 'RUNNING'
     #: Status of job that was being processed by a worker, but the worker crashed before completing the job.
     CRASHED = 'CRASHED'
+    #: Status of a job that was abandonned because it was not worth working on.
+    PRUNED = 'PRUNED'
     #: Status of a completed job.
     DONE = 'DONE'
 
