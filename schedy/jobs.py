@@ -16,7 +16,7 @@ class Job(object):
     #: Status of a completed job.
     DONE = 'DONE'
 
-    def __init__(self, job_id, experiment, hyperparameters, status=QUEUED, results=None, etag=None):
+    def __init__(self, job_id, experiment, hyperparameters, status=QUEUED, results=dict(), etag=None):
         '''
         Represents a job instance belonging to an experiment. You should not
         need to create it by hand. Use :py:meth:`schedy.Experiment.add_job`,
@@ -35,7 +35,7 @@ class Job(object):
             job_id (str): Unique id of the job.
             experiment (schedy.Experiment): Experiment containing this job.
             hyperparameters (dict): A dictionnary of hyperparameters values.
-            status (str): Job status. See :ref:`job_status`
+            status (str): Job status. See :ref:`job_status`.
             results (dict): A dictionnary of results values.
             etag (str): Value of the entity tag sent by the backend.
         '''
