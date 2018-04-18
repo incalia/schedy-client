@@ -5,7 +5,7 @@ import schedy
 import keras
 from keras.datasets import mnist
 from keras.models import Model
-from keras.layers import Input, Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from keras.layers import Input, Dense, Dropout, Flatten, Conv2D
 import keras.backend as K
 import tensorflow as tf
 import os
@@ -19,7 +19,7 @@ IMG_SIZE = 28
 NUM_CLASSES = 10
 
 def make_model(job):
-    inputs = Input(shape=x_train.shape[1:])
+    inputs = Input(shape=(IMG_SIZE, IMG_SIZE, 1))
     inner = inputs
     # Conv2D layers w/o any pooling in between, or any residual connection,
     # this is a bad network but it exists just for the sake of the experiment
@@ -65,7 +65,7 @@ def main(args):
     with experiment.next_job() as job:
         # Create and train the model for one epoch
         model = make_model(job)
-        model.fit(x_train, y_train, batch_size=256)
+        model.fit(x_train, y_train, epochs=5, batch_size=256)
         loss, accuracy = model.evaluate(x_test, y_test, batch_size=256)
         # Update the results
         job.results.setdefault('loss', []).append(loss)
