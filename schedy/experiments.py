@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+from builtins import *
+from future.utils import raise_from
+from future.standard_library import install_aliases
+install_aliases()
+
 import requests
 from urllib.parse import urljoin
 import json
@@ -164,7 +170,7 @@ class Experiment(object):
         try:
             scheduler = self._SCHEDULER_NAME
         except AttributeError as e:
-            raise AttributeError('Experiment implementations should define a _SCHEDULER_NAME attribute') from e
+            raise_from(AttributeError('Experiment implementations should define a _SCHEDULER_NAME attribute'), e)
         return {
                 'status': self.status,
                 'scheduler': {scheduler: self._get_params()},
@@ -182,7 +188,7 @@ class Experiment(object):
             scheduler = str(sched_def_key)
             params = sched_def_val
         except (ValueError, KeyError) as e:
-            raise ValueError('Invalid map definition for experiment.') from e
+            raise_from(ValueError('Invalid map definition for experiment.'), e)
         if not _check_status(status):
             raise ValueError('Invalid or unknown status value: {}.'.format(status))
         try:
@@ -250,7 +256,7 @@ class RandomSearch(Experiment):
                 dist_name_raw, dist_args = next(iter(dist_def.items()))
                 dist_name = str(dist_name_raw)
             except (KeyError, TypeError) as e:
-                raise ValueError('Invalid distribution definition.') from e
+                raise_from(ValueError('Invalid distribution definition.'), e)
             try:
                 dist_type = _DISTRIBUTION_TYPES[dist_name]
             except KeyError as e:
@@ -369,11 +375,11 @@ def _make_experiment(db, data):
     try:
         exp_data = dict(data)
     except ValueError as e:
-        raise errors.UnhandledResponseError('Expected experiment data as a dict, received {}.'.format(type(data)), None) from e
+        raise_from(errors.UnhandledResponseError('Expected experiment data as a dict, received {}.'.format(type(data)), None), e)
     try:
         exp = Experiment._from_map_definition(db._schedulers, exp_data)
     except ValueError as e:
-        raise errors.UnhandledResponseError('Response contains an invalid experiment', None) from e
+        raise_from(errors.UnhandledResponseError('Response contains an invalid experiment', None), e)
     exp._db = db 
     return exp
 

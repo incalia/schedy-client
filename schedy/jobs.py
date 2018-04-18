@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+from builtins import *
+
+from future.utils import raise_from
 import json
 from . import errors, encoding
 
@@ -161,7 +165,7 @@ class Job(object):
             else:
                 results = dict()
         except (KeyError, ValueError) as e:
-            raise ValueError('Invalid job map definition.') from e
+            raise_from(ValueError('Invalid job map definition.'), e)
         if experiment_name != experiment.name:
             raise ValueError('Inconsistent experiment name for job: expected {}, found {}.'.format(experiment.name, experiment_name))
         if not _check_status(status):
@@ -188,17 +192,17 @@ def _make_job(experiment, data, etag=None):
     try:
         job_data = dict(data)
     except ValueError as e:
-        raise errors.UnhandledResponseError('Excepting the description of a job as a dict, received type {}.'.format(type(data)), None) from e
+        raise_from(errors.UnhandledResponseError('Excepting the description of a job as a dict, received type {}.'.format(type(data)), None), e)
     try:
         job = Job._from_map_definition(experiment, job_data, etag)
     except ValueError as e:
-        raise errors.UnhandledResponseError('Response contains an invalid job.', None) from e
+        raise_from(errors.UnhandledResponseError('Response contains an invalid job.', None), e)
     return job
 
 def _job_from_response(experiment, response):
     try:
         content = response.json()
     except ValueError as e:
-        raise errors.UnhandledResponseError('Response contains invalid JSON:\n' + response.text, None) from e
+        raise_from(errors.UnhandledResponseError('Response contains invalid JSON:\n' + response.text, None), e)
     return _make_job(experiment, content, response.headers.get('ETag'))
 

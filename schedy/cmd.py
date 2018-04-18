@@ -1,5 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+from builtins import *
 
 import argparse
 import schedy
@@ -9,6 +12,7 @@ import getpass
 from urllib.parse import urljoin
 import os
 import stat
+import errno
 
 DEFAULT_CATEGORY = 'schedy'
 
@@ -218,7 +222,9 @@ def cmd_gen_token(args):
     if config_dir:
         try:
             os.makedirs(config_dir)
-        except FileExistsError:
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
             pass
     with open(config_path, 'w') as config_file:
         json.dump(new_content, config_file, cls=schedy.encoding.SchedyJSONEncoder)

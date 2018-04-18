@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+from builtins import *
+from future.utils import raise_from
+
 from .experiments import Experiment, RandomSearch, ManualSearch, PopulationBasedTraining, _make_experiment
 from .jwt import JWTTokenAuth
 from .pagination import PageObjectsIterator
@@ -78,12 +82,12 @@ class SchedyDB(object):
         try:
             token_data = response.json()
         except ValueError as e:
-            raise errors.ServerError('Response contains invalid JSON:\n' + response.text, None) from e
+            raise_from(errors.ServerError('Response contains invalid JSON:\n' + response.text, None), e)
         try:
             jwt_token = token_data['token']
             expires_at = datetime.datetime.fromtimestamp(token_data['expiresAt'])
         except (KeyError, OverflowError, OSError) as e:
-            raise errors.ServerError('Response contains invalid token data.', None) from e
+            raise_from(errors.ServerError('Response contains invalid token data.', None), e)
         self._jwt_token = JWTTokenAuth(jwt_token, expires_at)
         logger.debug('A new token was obtained.')
 
@@ -133,11 +137,11 @@ class SchedyDB(object):
         try:
             content = dict(response.json())
         except ValueError as e:
-            raise errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None) from e
+            raise_from(errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None), e)
         try:
             exp = Experiment._from_map_definition(self._schedulers, content)
         except ValueError as e:
-            raise errors.ServerError('Response contains an invalid experiment', None) from e
+            raise_from(errors.ServerError('Response contains an invalid experiment', None), e)
         exp._db = self
         return exp
 

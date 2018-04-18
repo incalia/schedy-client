@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+from builtins import *
+
 import requests
 import datetime
 
@@ -12,9 +15,9 @@ class JWTTokenAuth(requests.auth.AuthBase):
         self.expires_at = expires_at
         cur_time = datetime.datetime.now()
         self._pre_expiration = max(
-                self.expires_at - _PRE_EXPIRATION_TIME,
-                cur_time + (self.expires_at - cur_time) * _PRE_EXPIRATION_RATIO
-            )
+            self.expires_at - _PRE_EXPIRATION_TIME,
+            cur_time + datetime.timedelta(seconds=(self.expires_at - cur_time).total_seconds() * _PRE_EXPIRATION_RATIO),
+        )
 
     def __call__(self, request):
         request.headers['Authorization'] = 'Bearer ' + self.token_string

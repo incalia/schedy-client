@@ -13,6 +13,7 @@ setup(
     install_requires=[
         'requests>=2.18.4',
         'tabulate>=0.8.2',
+        'future>=0.16.0',
     ],
     packages=['schedy'],
     entry_points={
@@ -26,7 +27,11 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
-        'Programming Language :: Python :: 3 :: Only',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Development Status :: 4 - Beta',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',

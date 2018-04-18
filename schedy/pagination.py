@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+from builtins import *
+from future.utils import raise_from
+
 import warnings
 
 from . import errors
@@ -38,7 +42,7 @@ class PageObjectsIterator(object):
         try:
             result = dict(response.json())
         except ValueError as e:
-            raise errors.UnhandledResponseError('Expected page as a dict.') from e
+            raise_from(errors.UnhandledResponseError('Expected page as a dict.'), e)
         if result.keys() > _EXPECTED_PAGE_KEYS:
             warnings.warn('Unexpected page keys: {}.'.format(result.keys() - _EXPECTED_PAGE_KEYS))
         try:
@@ -49,5 +53,5 @@ class PageObjectsIterator(object):
             else:
                 self._next_token = None
         except (ValueError, KeyError) as e:
-            raise errors.UnhandledResponseError('Invalid page received.') from e
+            raise_from(errors.UnhandledResponseError('Invalid page received.'), e)
 

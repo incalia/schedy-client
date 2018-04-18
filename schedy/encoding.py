@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+from builtins import *
+
 import json
 from traceback import format_exc
 import warnings
@@ -25,6 +30,6 @@ class SchedyJSONEncoder(json.JSONEncoder):
                 val, converted = convert(obj)
                 if converted:
                     return val
-            except Exception as e:
+            except Exception:
                 warnings.warn(format_exc())
         return super().default(obj)
