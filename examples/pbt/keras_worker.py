@@ -12,6 +12,7 @@ from keras.layers import Input, Dense, Dropout, Flatten, Conv2D
 import keras.backend as K
 import tensorflow as tf
 import os
+import errno
 import argparse
 
 cfg = tf.ConfigProto()
@@ -56,8 +57,9 @@ def main(args):
     # Create the directory that will contain the models
     try:
         os.makedirs(args.models_dir)
-    except FileExistsError:
-        pass
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
     # Load the training/test data
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = x_train.reshape(x_train.shape[0], IMG_SIZE, IMG_SIZE, 1).astype(K.floatx()) / 255.
