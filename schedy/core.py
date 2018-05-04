@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from builtins import *
-from future.utils import raise_from
+from six import raise_from
 
 from .experiments import Experiment, RandomSearch, ManualSearch, PopulationBasedTraining, _make_experiment
 from .jwt import JWTTokenAuth
@@ -14,8 +14,7 @@ import json
 import requests
 import os.path
 import datetime
-from urllib.parse import quote as urlquote
-from urllib.parse import urljoin
+from requests.compat import urljoin, quote as urlquote
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import logging

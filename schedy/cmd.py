@@ -9,7 +9,7 @@ import schedy
 import json
 from tabulate import tabulate
 import getpass
-from urllib.parse import urljoin
+from requests.compat import urljoin
 import os
 import stat
 import errno

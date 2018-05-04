@@ -13,7 +13,6 @@ setup(
     install_requires=[
         'requests>=2.18.4',
         'tabulate>=0.8.2',
-        'future>=0.16.0',
     ],
     packages=['schedy'],
     entry_points={

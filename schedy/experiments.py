@@ -2,12 +2,10 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from builtins import *
-from future.utils import raise_from
-from future.standard_library import install_aliases
-install_aliases()
+from six import raise_from
 
 import requests
-from urllib.parse import urljoin
+from requests.compat import urljoin
 import json
 import functools
 import logging
