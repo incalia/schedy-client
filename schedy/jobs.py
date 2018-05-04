@@ -4,8 +4,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from builtins import *
 
 from six import raise_from
-import json
 from . import errors, encoding
+from .compat import json_dumps
 
 def _check_status(status):
     return status in (Job.QUEUED, Job.RUNNING, Job.CRASHED, Job.PRUNED, Job.DONE)
@@ -71,7 +71,7 @@ class Job(object):
         db = self.experiment._db
         url = db._job_url(self.experiment.name, self.job_id)
         map_def = self._to_map_definition()
-        data = json.dumps(map_def, cls=encoding.SchedyJSONEncoder)
+        data = json_dumps(map_def, cls=encoding.SchedyJSONEncoder)
         headers = dict()
         if safe:
             if self.etag is None:

@@ -8,6 +8,7 @@ from .experiments import Experiment, RandomSearch, ManualSearch, PopulationBased
 from .jwt import JWTTokenAuth
 from .pagination import PageObjectsIterator
 from . import errors, encoding
+from .compat import json_dumps
 
 import functools
 import json
@@ -105,7 +106,7 @@ class SchedyDB(object):
         '''
         url = self._experiment_url(exp.name)
         content = exp._to_map_definition()
-        data = json.dumps(content, cls=encoding.SchedyJSONEncoder)
+        data = json_dumps(content, cls=encoding.SchedyJSONEncoder)
         response = self._authenticated_request('PUT', url, data=data, headers={'If-None-Match': '*'})
         # Handle code 412: Precondition failed
         if response.status_code == requests.codes.precondition_failed:

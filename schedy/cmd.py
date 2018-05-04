@@ -13,6 +13,7 @@ from requests.compat import urljoin
 import os
 import stat
 import errno
+from .compat import json_dumps
 
 DEFAULT_CATEGORY = 'schedy'
 
@@ -227,7 +228,7 @@ def cmd_gen_token(args):
                 raise
             pass
     with open(config_path, 'w') as config_file:
-        json.dump(new_content, config_file, cls=schedy.encoding.SchedyJSONEncoder)
+        config_file.write(json_dumps(new_content, cls=schedy.encoding.SchedyJSONEncoder))
     try:
         os.chmod(config_path, stat.S_IRUSR | stat.S_IWUSR)
     except OSError:
@@ -356,7 +357,7 @@ def exp_table(experiments):
         }
         if isinstance(exp, schedy.RandomSearch):
             for name, dist in exp.distributions.items():
-                row[('hyperparameter', name)] = '{} ({})'.format(dist._FUNC_NAME, json.dumps(dist._args(), cls=schedy.encoding.SchedyJSONEncoder))
+                row[('hyperparameter', name)] = '{} ({})'.format(dist._FUNC_NAME, json_dumps(dist._args(), cls=schedy.encoding.SchedyJSONEncoder))
         data.add_row(row)
     return data
 
