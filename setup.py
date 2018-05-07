@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='Schedy',
-    version='0.1.0b4',
+    version='0.1.0b5',
     description='Python client for Schedy',
     long_description=open('README.rst').read(),
     author='Incalia',
