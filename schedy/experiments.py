@@ -268,7 +268,7 @@ class RandomSearch(Experiment):
 class PopulationBasedTraining(Experiment):
     _SCHEDULER_NAME = 'PBT'
 
-    def __init__(self, name, objective, result_name, exploit, explore=dict(), initial_distributions=dict(), population_size=None, status=Experiment.RUNNING):
+    def __init__(self, name, objective, result_name, exploit, explore=dict(), initial_distributions=dict(), population_size=None, status=Experiment.RUNNING, max_generations=None):
         '''
         Implements Population Based Training (see `paper
         <https://arxiv.org/pdf/1711.09846.pdf>`_).
@@ -313,6 +313,13 @@ class PopulationBasedTraining(Experiment):
                 does **not** have to be the number of jobs you can process in
                 parallel. The original paper used values between 10 and 80.
             status (str): Status of the experiment. See :ref:`experiment_status`.
+            max_generations (int): Maximum number of generations to run before
+                marking the experiment the experiments as done
+                (:py:ref:`experiment_status`). When the maximum number of
+                generations is reached, subsequent calls to
+                :py:meth:`schedy.Experiment.next_job` will raise
+                :py:class:`schedy.errors.NoJobError`, to indicate that the job
+                queue is empty.
         '''
         super().__init__(name, status)
         self.objective = objective
@@ -321,6 +328,7 @@ class PopulationBasedTraining(Experiment):
         self.explore = explore
         self.initial_distributions = initial_distributions
         self.population_size = population_size
+        self.max_generations = max_generations
 
     @classmethod
     def _create_from_params(cls, name, status, params):
@@ -349,6 +357,9 @@ class PopulationBasedTraining(Experiment):
                 strat_name, strat_params = next(iter(strat_map.items()))
                 explore_map[hp] = _EXPLORE_STRATEGIES[strat_name]._from_params(strat_params)
             kwargs['explore'] = explore_map
+        max_generations = params.get('max_generations')
+        if max_generations is not None:
+            kwargs['max_generations'] = max_generations
         return cls(**kwargs)
 
     def _get_params(self):
@@ -367,6 +378,8 @@ class PopulationBasedTraining(Experiment):
             params['explore'] = {
                 name: {strat._EXPLORE_STRATEGY_NAME: strat._get_params()} for name, strat in self.explore.items()
             }
+        if self.max_generations:
+            params['maxGenerations'] = self.max_generations
         return params
 
 def _make_experiment(db, data):
