@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-from builtins import *
 
 import argparse
 import schedy
@@ -13,6 +12,7 @@ from requests.compat import urljoin
 import os
 import stat
 import errno
+from six.moves import input
 from .compat import json_dumps
 
 DEFAULT_CATEGORY = 'schedy'

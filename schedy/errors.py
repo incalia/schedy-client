@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-from builtins import *
 
 import requests
 
@@ -34,7 +33,7 @@ class HTTPError(SchedyError):
             msg_body = msg_body[:147] + '...'
         msg_body = msg_body.replace('\n', '\n> ')
         message = 'HTTP Error {}:\n> {}'.format(code, msg_body)
-        super().__init__(message, *args)
+        super(HTTPError, self).__init__(message, *args)
 
 class ClientError(HTTPError):
     '''

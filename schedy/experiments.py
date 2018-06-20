@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-from builtins import *
 from six import raise_from
 
 import requests
@@ -239,7 +238,7 @@ class RandomSearch(Experiment):
                 hyperparameters.
             status (str): Status of the experiment. See :ref:`experiment_status`.
         '''
-        super().__init__(name, status)
+        super(RandomSearch, self).__init__(name, status)
         self.distributions = distributions
 
     @classmethod
@@ -321,7 +320,7 @@ class PopulationBasedTraining(Experiment):
                 :py:class:`schedy.errors.NoJobError`, to indicate that the job
                 queue is empty.
         '''
-        super().__init__(name, status)
+        super(PopulationBasedTraining, self).__init__(name, status)
         self.objective = objective
         self.result_name = result_name
         self.exploit = exploit

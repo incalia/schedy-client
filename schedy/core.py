@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-from builtins import *
 from six import raise_from
 
 from .experiments import Experiment, RandomSearch, ManualSearch, PopulationBasedTraining, _make_experiment
@@ -29,7 +28,7 @@ class SchedyRetry(Retry):
         logger.warn('Error while querying Schedy service, retrying.')
         if response is not None:
             logger.warn('Server message: {!s}'.format(response.data))
-        return super().increment(
+        return super(SchedyRetry, self).increment(
             method=method,
             url=url,
             response=response,

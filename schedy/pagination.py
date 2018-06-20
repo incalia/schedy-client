@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-from builtins import *
 from six import raise_from
 
 import warnings
@@ -31,6 +30,9 @@ class PageObjectsIterator(object):
         cur_item = self._create_obj(self._items[0])
         self._items = self._items[1:]
         return cur_item
+
+    # Python 2 support
+    next = __next__
 
     def _get_page(self, start_token=None):
         if start_token is None:
