@@ -3,31 +3,32 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from six import raise_from
 
-from .experiments import Experiment, RandomSearch, ManualSearch, PopulationBasedTraining, _make_experiment
-from .jwt import JWTTokenAuth
-from .pagination import PageObjectsIterator
-from . import errors, encoding
-from .compat import json_dumps
-
 import functools
 import json
 import requests
 import os.path
 import datetime
-from requests.compat import urljoin, quote as urlquote
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
 import logging
 
+from .experiments import Experiment, RandomSearch, ManualSearch, PopulationBasedTraining, _make_experiment
+from .jwt import JWTTokenAuth
+from .pagination import PageObjectsIterator
+from . import errors, encoding
+from .compat import json_dumps
+from requests.packages.urllib3.util.retry import Retry
+from requests.compat import urljoin, quote as urlquote
+from requests.adapters import HTTPAdapter
+
 logger = logging.getLogger(__name__)
+
 
 class SchedyRetry(Retry):
     BACKOFF_MAX = 8 * 60
 
     def increment(self, method=None, url=None, response=None, error=None, *args, **kwargs):
-        logger.warn('Error while querying Schedy service, retrying.')
+        logger.warning('Error while querying Schedy service, retrying.')
         if response is not None:
-            logger.warn('Server message: {!s}'.format(response.data))
+            logger.warning('Server message: {!s}'.format(response.data))
         return super(SchedyRetry, self).increment(
             method=method,
             url=url,
@@ -36,11 +37,26 @@ class SchedyRetry(Retry):
             *args,
             **kwargs)
 
-#: Number of retries if the authentication fails.
+
+#: Number of retries if the authentication fails
 NUM_AUTH_RETRIES = 2
+
 
 def _default_config_path():
     return os.path.join(os.path.expanduser('~'), '.schedy', 'client.json')
+
+
+class Routes:
+
+    def __init__(self, root):
+        self.root = root
+        # Accounts management
+        self.signup = urljoin(self.root, '/accounts/signup/')
+        self.signin = urljoin(self.root, '/accounts/signin/')
+        self.generate_token = urljoin(self.root, '/accounts/generateToken/')
+        self.activate = urljoin(self.root, '/accounts/activate/')
+        self.disable = urljoin(self.root, '/accounts/disable/')
+
 
 class SchedyDB(object):
     def __init__(self, config_path=None, config_override=None):
@@ -60,23 +76,25 @@ class SchedyDB(object):
         # Add the trailing slash if it's not there
         if len(self.root) == 0 or self.root[-1] != '/':
             self.root = self.root + '/'
+        self.routes = Routes(self.root)
         self._schedulers = dict()
         self._register_default_schedulers()
         self._jwt_token = None
-        self._jwt_expiration = datetime.datetime(year=1970, month=1, day=1)
         self._session = None
 
     def _authenticate(self):
-        '''
+        """
         Renew authentication. You do not usually need to call this function, as
         it will always be called automatically when needed.
-        '''
+        """
+
         logger.debug('Renewing authentication')
-        if self.token_type == 'password':
-            url = urljoin(self.root, 'passauth/')
-        else:
-            url = urljoin(self.root, 'token/')
-        response = self._perform_request('POST', url, json={'email': self.email, 'token': self.api_token})
+        assert self._token_type in ['apiToken', 'password']
+
+        response = self._perform_request('POST', self.routes.signin,
+                                         json={'email': self._email, 'token': self._api_token, 'type': self._token_type},
+                                         headers={'Content-Type': 'application/json'}
+                                         )
         errors._handle_response_errors(response)
         try:
             token_data = response.json()
@@ -104,12 +122,14 @@ class SchedyDB(object):
             >>> db.add_experiment(exp)
         '''
         url = self._experiment_url(exp.name)
+
         content = exp._to_map_definition()
         data = json_dumps(content, cls=encoding.SchedyJSONEncoder)
         response = self._authenticated_request('PUT', url, data=data, headers={'If-None-Match': '*'})
         # Handle code 412: Precondition failed
+
         if response.status_code == requests.codes.precondition_failed:
-            raise errors.ResourceExistsError(response.text, response.status_code)
+            raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
         else:
             errors._handle_response_errors(response)
         exp._db = self
@@ -188,15 +208,19 @@ class SchedyDB(object):
             if hasattr(config_path, 'read'):
                 config = json.loads(config_path.read())
             else:
-                with open(config_path) as f:
-                    config = json.load(f)
+                try:
+                    with open(config_path) as f:
+                        config = json.load(f)
+                except FileNotFoundError:
+                    raise errors.ConfigFileNotFoundError('The configuration file was not found in {}'.format(config_path), None)
+
         self.root = config['root']
-        self.email = config['email']
-        self.token_type = config.get('token_type', 'api_token')
-        allowed_token_types = ['api_token', 'password']
-        if self.token_type not in allowed_token_types:
+        self._email = config['email']
+        self._token_type = config.get('token_type', 'apiToken')
+        allowed_token_types = ['apiToken', 'password']
+        if self._token_type not in allowed_token_types:
             raise ValueError('Configuration value token_type must be one of {}.'.format(', '.join(allowed_token_types)))
-        self.api_token = config['token']
+        self._api_token = config['token']
 
     def _authenticated_request(self, *args, **kwargs):
         response = None
@@ -237,4 +261,3 @@ class SchedyDB(object):
         logger.debug('Received headers: %s', req.headers)
         logger.debug('Received data: %s', req.text)
         return req
-
