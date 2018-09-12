@@ -4,18 +4,20 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
-import schedy
 import json
-from tabulate import tabulate
 import getpass
-from requests.compat import urljoin
 import os
 import stat
 import errno
+import schedy
+
+from requests.compat import urljoin
+from tabulate import tabulate
 from six.moves import input
 from .compat import json_dumps
 
 DEFAULT_CATEGORY = 'schedy'
+
 
 def setup_add(subparsers):
     parser = subparsers.add_parser('add', help='Add an experiment.')
@@ -37,6 +39,7 @@ def setup_add(subparsers):
     ).format(', '.join(schedy.random._DISTRIBUTION_TYPES.keys()))
     random_parser.add_argument('hyperparameters', nargs='+', help=RANDOM_HP_HELP)
     random_parser.set_defaults(parser=random_parser)
+
 
 def cmd_add(args):
     db = schedy.SchedyDB(config_path=args.config)
@@ -64,12 +67,14 @@ def cmd_add(args):
         exp = schedy.RandomSearch(args.experiment, status=args.status, distributions=hyperparameters)
     db.add_experiment(exp)
 
+
 def setup_rm(subparsers):
     parser = subparsers.add_parser('rm', help='Remove an experiment or a job.')
     parser.set_defaults(func=cmd_rm)
     parser.add_argument('experiment', help='Name of the experiment.')
     parser.add_argument('job', nargs='?', help='Name of the job.')
     parser.add_argument('-f', '--force', action='store_true', help='Don\'t ask for confirmation.')
+
 
 def cmd_rm(args):
     db = schedy.SchedyDB(config_path=args.config)
@@ -92,11 +97,13 @@ def cmd_rm(args):
                 return
         job.delete()
 
+
 def setup_show(subparsers):
     parser = subparsers.add_parser('show', help='Show an experiment/a job.')
     parser.set_defaults(func=cmd_show)
     parser.add_argument('experiment', help='Name for the new experiment.')
     parser.add_argument('job', nargs='?', help='Name of the job.')
+
 
 def cmd_show(args):
     db = schedy.SchedyDB(config_path=args.config)
@@ -107,6 +114,7 @@ def cmd_show(args):
         job = exp.get_job(args.job)
         print_job(job)
 
+
 def setup_list(subparsers):
     parser = subparsers.add_parser('list', help='List experiments/jobs (by default, lists all experiments).')
     parser.set_defaults(func=cmd_list, parser=parser)
@@ -116,6 +124,7 @@ def setup_list(subparsers):
     parser.add_argument('-s', '--sort', action='append', help='Field by which we should sort. You can specify multiple fields using this argument multiple times.')
     parser.add_argument('-d', '--decreasing', action='store_true', help='Sort in reverse order (decreasing values).')
     parser.add_argument('-f', '--field', action='append', help='Specify this option multiple times to select the fields you want to diply (all by default).')
+
 
 def cmd_list(args):
     db = schedy.SchedyDB(config_path=args.config)
@@ -142,6 +151,7 @@ def cmd_list(args):
             table.filter_categories([DEFAULT_CATEGORY])
         table.print_table('plain', include_headers=False)
 
+
 def setup_push(subparsers):
     parser = subparsers.add_parser('push', help='Manually add a job to an existing experiment.')
     parser.set_defaults(func=cmd_push)
@@ -150,6 +160,7 @@ def setup_push(subparsers):
     parser.add_argument('-r', '--results', nargs='+', help='Optional results for the job. Each result must be provided as a pair: name value. value must be a valid JSON value. For example: -r accuracy 0.9 loss_history \'[0.9, 0.8, 0.7]\'')
     parser.add_argument('-p', '--hyperparameters', nargs='+', required=True, help='Hyperparameters for the job. Each hyperparameter must be provided as a pair: name value. value must be a valid JSON value. For example: -p learning_rate 0.01 num_layers 3 size_layers \'[512, 1024, 512]\'')
     parser.set_defaults(parser=parser)
+
 
 def cmd_push(args):
     db = schedy.SchedyDB(config_path=args.config)
@@ -190,6 +201,7 @@ def cmd_push(args):
     job = exp.add_job(**kwargs)
     print_job(job)
 
+
 def setup_gen_token(subparsers):
     parser = subparsers.add_parser('gen-token', help='Generate and save a new API token (i.e. configuration file).')
     parser.set_defaults(func=cmd_gen_token)
@@ -197,24 +209,26 @@ def setup_gen_token(subparsers):
     parser.add_argument('--email', help='User email (prompted if not provided).')
     parser.add_argument('--password', help='User password (prompted if not provided).')
 
+
 def cmd_gen_token(args):
+
     config = {
         'root': args.root,
         'token_type': 'password',
+        'email': args.email or input('Email: '),
+        'token': args.password or getpass.getpass('Password: ')
     }
-    if args.email is None:
-        config['email'] = input('Email: ')
-    else:
-        config['email'] = args.email
-    if args.password is None:
-        config['token'] = getpass.getpass('Password: ')
-    else:
-        config['token'] = args.password
+
     db = schedy.SchedyDB(config_override=config)
-    url = urljoin(db.root, 'resettoken/')
-    response = db._authenticated_request('POST', url=url)
+    response = db._authenticated_request('POST', url=db.routes.generate_token)
     schedy.errors._handle_response_errors(response)
     new_content = response.json()
+    new_content.update({
+        'root': config['root'],
+        'email': config['email'],
+        'token_type': 'apiToken',
+    })
+
     if args.config is None:
         config_path = schedy.core._default_config_path()
     else:
@@ -235,6 +249,7 @@ def cmd_gen_token(args):
         print('Token file permissions could not be set.')
     print('Your token has been saved to {}.'.format(config_path))
 
+
 def main():
     parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')
     parser.add_argument('--config', type=str, help='Schedy configuration file.')
@@ -248,6 +263,7 @@ def main():
     setup_gen_token(subparsers)
     args = parser.parse_args()
     args.func(args)
+
 
 class TableData(object):
     def __init__(self):
@@ -347,6 +363,7 @@ class TableData(object):
         else:
             print(tabulate(self.rows, tablefmt=fmt))
 
+
 def exp_table(experiments):
     data = TableData()
     for exp in experiments:
@@ -360,6 +377,7 @@ def exp_table(experiments):
                 row[('hyperparameter', name)] = '{} ({})'.format(dist._FUNC_NAME, json_dumps(dist._args(), cls=schedy.encoding.SchedyJSONEncoder))
         data.add_row(row)
     return data
+
 
 def job_table(jobs):
     data = TableData()
@@ -376,11 +394,14 @@ def job_table(jobs):
         data.add_row(row)
     return data
 
+
 def print_exp(exp):
     exp_table([exp]).print_paragraphs()
 
+
 def print_job(job):
     job_table([job]).print_paragraphs()
+
 
 if __name__ == '__main__':
     main()
