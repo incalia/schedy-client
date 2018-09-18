@@ -45,7 +45,7 @@ NUM_AUTH_RETRIES = 2
 class _Routes(object):
 
     def __init__(self, root):
-        self.root = root
+        self._root = root
 
         # Accounts management
         self.signup = urljoin(self.root, '/accounts/signup/')
@@ -57,8 +57,8 @@ class _Routes(object):
         # Project Management
         self.projects = urljoin(self.root, '/projects/')
         self.project = lambda project_id: urljoin(self.root, '/projects/{}/'.format(urlquote(project_id)))
-        self.project_permissions = urljoin(self.root, '/projects/{projectID}/permissions/')
-        self.project_permissions_edit = urljoin(self.root, '/projects/{projectID}/permissions/{permissionEmail}/')
+        self.project_permissions = lambda project_id: urljoin(self.root, '/projects/{}/permissions/'.format(urlquote(project_id)))
+        self.project_permissions_edit = lambda project_id, email_address: urljoin(self.root, '/projects/{}/permissions/{}/'.format(urlquote(project_id), urlquote(email_address)))
 
         # Experiments management
         self.experiments = lambda project_id: urljoin(self.root, '/projects/{}/experiments/'.format(urlquote(project_id)))
@@ -69,6 +69,14 @@ class _Routes(object):
         # Trials management
         self.trials = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/trials/'.format(urlquote(project_id), urlquote(exp_name)))
         self.trial = lambda project_id, exp_name, trial_id: urljoin(self.root, '/projects/{}/experiments/{}/trials/{}/'.format(urlquote(project_id), urlquote(exp_name), urlquote(trial_id)))
+
+    @property
+    def root(self):
+        return self._root
+
+    @root.setter
+    def root(self, value):
+        raise AttributeError("Cannot set `routes` attribute")
 
 
 class Config(object):
