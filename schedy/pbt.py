@@ -4,8 +4,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 #: Minimize the objective
 MINIMIZE = 'min'
+
 #: Maximize the objective
 MAXIMIZE = 'max'
+
 
 class Truncate(object):
     _EXPLOIT_STRATEGY_NAME = 'truncate'
@@ -35,6 +37,7 @@ class Truncate(object):
     def __eq__(self, other):
         return type(self) == type(other) and \
             self.proportion == other.proportion
+
 
 class Perturb(object):
     _EXPLORE_STRATEGY_NAME = 'perturb'

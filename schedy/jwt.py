@@ -8,6 +8,7 @@ import datetime
 _PRE_EXPIRATION_TIME = datetime.timedelta(minutes=1)
 _PRE_EXPIRATION_RATIO = 0.95
 
+
 class JWTTokenAuth(requests.auth.AuthBase):
     def __init__(self, token_string, expires_at):
         self.token_string = token_string
@@ -27,4 +28,3 @@ class JWTTokenAuth(requests.auth.AuthBase):
 
     def expires_soon(self):
         return datetime.datetime.now() >= self._pre_expiration
-

@@ -4,11 +4,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import requests
 
+
 class SchedyError(Exception):
     '''
     Base class for all Schedy exceptions.
     '''
     pass
+
 
 class HTTPError(SchedyError):
     '''
@@ -35,11 +37,13 @@ class HTTPError(SchedyError):
         message = 'HTTP Error {}:\n> {}'.format(code, msg_body)
         super(HTTPError, self).__init__(message, *args)
 
+
 class ClientError(HTTPError):
     '''
     Exception caused by the client side.
     '''
     pass
+
 
 class ClientRequestError(ClientError):
     '''
@@ -47,11 +51,13 @@ class ClientRequestError(ClientError):
     '''
     pass
 
+
 class AuthenticationError(ClientRequestError):
     '''
     Authentication error, access to the resource is forbidden.
     '''
     pass
+
 
 class ReauthenticateError(ClientRequestError):
     '''
@@ -59,11 +65,13 @@ class ReauthenticateError(ClientRequestError):
     '''
     pass
 
+
 class ResourceExistsError(ClientRequestError):
     '''
     The resource cannot be created because it exists already.
     '''
     pass
+
 
 class UnsafeUpdateError(ClientRequestError):
     '''
@@ -73,11 +81,13 @@ class UnsafeUpdateError(ClientRequestError):
     '''
     pass
 
+
 class NoJobError(ClientRequestError):
     '''
     The request could not return any job.
     '''
     pass
+
 
 class UnhandledResponseError(ClientError):
     '''
@@ -85,11 +95,13 @@ class UnhandledResponseError(ClientError):
     '''
     pass
 
+
 class ServerError(HTTPError):
     '''
     Server-side exception.
     '''
     pass
+
 
 def _handle_response_errors(response):
     code = response.status_code

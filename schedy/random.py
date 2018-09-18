@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+
 class LogUniform(object):
     _FUNC_NAME = 'loguniform'
 
@@ -35,6 +36,7 @@ class LogUniform(object):
             self.low == other.low and \
             self.high == other.high
 
+
 class Uniform(object):
     _FUNC_NAME = 'uniform'
 
@@ -65,6 +67,7 @@ class Uniform(object):
         return type(self) == type(other) and \
             self.low == other.low and \
             self.high == other.high
+
 
 class Choice(object):
     _FUNC_NAME = 'choice'
@@ -109,6 +112,7 @@ class Choice(object):
             self.values == other.values and \
             self.weights == other.weights
 
+
 class Normal(object):
     _FUNC_NAME = 'normal'
 
@@ -140,6 +144,7 @@ class Normal(object):
             self.mean == other.mean and \
             self.std == other.std
 
+
 class Constant(object):
     _FUNC_NAME = 'const'
 
@@ -165,5 +170,6 @@ class Constant(object):
     def __eq__(self, other):
         return type(self) == type(other) and \
             self.value == other.value
+
 
 _DISTRIBUTION_TYPES = {cls._FUNC_NAME: cls for cls in (LogUniform, Uniform, Choice, Normal, Constant)}

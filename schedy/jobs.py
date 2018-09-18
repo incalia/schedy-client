@@ -6,8 +6,10 @@ from six import raise_from
 from . import errors, encoding
 from .compat import json_dumps
 
+
 def _check_status(status):
     return status in (Job.QUEUED, Job.RUNNING, Job.CRASHED, Job.PRUNED, Job.DONE)
+
 
 class Job(object):
     #: Status of a queued job. Queued jobs are returned when calling :py:meth:`schedy.Experiment.next_job`.
@@ -187,6 +189,7 @@ class Job(object):
             map_def['results'] = self.results
         return map_def
 
+
 def _make_job(experiment, data, etag=None):
     try:
         job_data = dict(data)
@@ -197,6 +200,7 @@ def _make_job(experiment, data, etag=None):
     except ValueError as e:
         raise_from(errors.UnhandledResponseError('Response contains an invalid job.', None), e)
     return job
+
 
 def _job_from_response(experiment, response):
     try:

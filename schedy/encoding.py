@@ -12,6 +12,7 @@ _additional_convert = []
 # This way, we do not add unnecessary dependencies
 try:
     import numpy as np
+
     def _np_convert(obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist(), True
@@ -21,6 +22,7 @@ try:
     _additional_convert.append(_np_convert)
 except ImportError:
     pass
+
 
 class SchedyJSONEncoder(json.JSONEncoder):
     def default(self, obj):
