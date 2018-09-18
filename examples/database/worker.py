@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import schedy
 import random
 
-db = schedy.SchedyDB()
+db = schedy.Client()
 experiment = db.get_experiment('MinimizeSimple')
 for i in range(20):
     # Test the problem for random values of x and y, 20 times

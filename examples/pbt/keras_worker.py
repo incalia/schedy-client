@@ -51,7 +51,7 @@ def make_model(job):
 
 def main(args):
     # Get experiment data
-    db = schedy.SchedyDB()
+    db = schedy.Client()
     experiment = db.get_experiment(args.experiment)
     # Create the directory that will contain the models
     try:

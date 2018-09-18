@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import schedy
 
-db = schedy.SchedyDB()
+db = schedy.Client()
 experiment = db.get_experiment('MinimizeManual')
 job = experiment.add_job(hyperparameters={'x': 1, 'y': 2})
 

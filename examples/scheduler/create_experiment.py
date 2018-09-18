@@ -5,6 +5,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import schedy
 
-db = schedy.SchedyDB()
+db = schedy.Client()
 experiment = schedy.ManualSearch('MinimizeManual')
 db.add_experiment(experiment)

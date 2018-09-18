@@ -3,10 +3,10 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from schedy import SchedyDB
+from schedy import Client
 
 if __name__ == '__main__':
-    db = SchedyDB()
+    db = Client()
     for exp in db.get_experiments():
         print(exp)
         for job in exp.all_jobs():

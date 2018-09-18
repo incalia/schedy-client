@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import schedy
 import time
 
-db = schedy.SchedyDB()
+db = schedy.Client()
 experiment = db.get_experiment('MinimizeRandom')
 for i in range(20):
     try:
