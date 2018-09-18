@@ -16,7 +16,7 @@ setup(
         'six>=1.11.0',
     ],
     tests_require=[
-        'httpretty>=0.9.5',
+        'responses>=0.9.0',
     ],
     packages=['schedy'],
     entry_points={
