@@ -93,6 +93,20 @@ class Experiments(object):
         self.core = core
         self.project_id = project_id
 
+    def create(self, name, hyperparameters, metrics):
+        url = self.core.routes.experiments(self.id_)
+        data = experiment.to_def().to_json()
+        response = self.core.authenticated_request('POST', url, data=data)
+        # Handle code 412: Precondition failed
+
+        if response.status_code == requests.codes.precondition_failed:
+            raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
+        else:
+            errors._handle_response_errors(response)
+        return Experiment(self.core, self.project_id, name,
+                          hyperparameters=hyperparameters,
+                          metrics=metrics)
+
     def get(self, name):
         """
             Retrieves an experiment from the Schedy service by name.

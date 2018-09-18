@@ -136,28 +136,28 @@ class Core(object):
         self._jwt_token = JWTTokenAuth(jwt_token, expires_at)
         logger.debug('A new token was obtained.')
 
-    def _register_scheduler(self, experiment_type):
-        """
-        Registers a new type of experiment. You should never have to use this
-        function yourself.
-
-        Args:
-            experiment_type (class): Type of the experiment, it must have an
-                attribute called _SCHEDULER_NAME.
-        """
-        self._schedulers[experiment_type._SCHEDULER_NAME] = experiment_type
-
+#     def _register_scheduler(self, experiment_type):
+#         """
+#         Registers a new type of experiment. You should never have to use this
+#         function yourself.
+#
+#         Args:
+#             experiment_type (class): Type of the experiment, it must have an
+#                 attribute called _SCHEDULER_NAME.
+#         """
+#         self._schedulers[experiment_type._SCHEDULER_NAME] = experiment_type
+#
 #     def _register_default_schedulers(self):
 #         self._register_scheduler(RandomSearch)
 #         self._register_scheduler(ManualSearch)
 #         self._register_scheduler(PopulationBasedTraining)
-# 
+#
 #     def _all_experiments_url(self):
 #         return urljoin(self.root, 'experiments/')
-# 
+#
 #     def _experiment_url(self, name):
 #         return urljoin(self._all_experiments_url(), '{}/'.format(urlquote(name, safe='')))
-# 
+#
 #     def _trial_url(self, experiment, trial):
 #         return urljoin(self.root, 'experiments/{}/trials/{}/'.format(urlquote(experiment, safe=''), urlquote(trial, safe='')))
 
@@ -202,12 +202,7 @@ class Core(object):
         return req
 
 
-class Account(object):
-    def __init__(self, core):
-        self.core = core
-
-
-class SchedyDef(object):
+class _Definition(object):
     def __init__(self, d):
         self.d = d
 
@@ -279,7 +274,7 @@ class Trial(object):
                     _def[k1][k2] = self._map(v2)
 
         _def['status'] = self.status
-        return SchedyDef(_def)
+        return _Definition(_def)
 
     @classmethod
     def _imap(self, param):

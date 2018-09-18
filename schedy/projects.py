@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import functools
 from .pagination import PageObjectsIterator
-from .experiments import Experiments, Experiment
+from .experiments import Experiments
 from .compat import json_dumps
 from . import errors, encoding
 import logging
@@ -21,42 +21,36 @@ class Projects(object):
     def get_all(self):
         return PageObjectsIterator(
             reqfunc=functools.partial(self.core.authenticated_request, 'GET', self.core.routes.projects),
-            obj_creation_func=functools.partial(Project, self.core),
+            obj_creation_func=functools.partial(Project._from_description, self.core),
             expected_field='projects'
         )
 
-    def get(self, project_id):
-        project_desc = self.describe(project_id)
-        return Project(self.core, project_desc)
+    def get(self, id_):
+        assert len(id_) > 0, 'Project ID cannot be empty'
 
-    def create(self, project_id, project_name):
-        url = self.core.routes.projects
-        content = {
-            'projectID': project_id,
-            'name': project_name
-        }
-
-        data = json_dumps(content, cls=encoding.SchedyJSONEncoder)
-        response = self.core.authenticated_request('POST', url, data=data)
-        # Handle code 412: Precondition failed
-
-        if response.status_code == requests.codes.precondition_failed:
-            raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
-        else:
-            errors._handle_response_errors(response)
-
-    def describe(self, project_id):
-        assert len(project_id) > 0, 'project_id should be a nonempty string'
-
-        url = self.core.routes.project(project_id)
+        url = self.core.routes.project(id_)
         response = self.core.authenticated_request('GET', url)
         errors._handle_response_errors(response)
 
-        project_desc = dict(response.json())
-        return project_desc
+        return Project._from_description(self.core, response.json())
 
-    def disable(self, project_id):
-        url = self.core.routes.project(project_id)
+    def create(self, id_, name):
+        url = self.core.routes.projects
+        content = {
+            'projectID': id_,
+            'name': name
+        }
+        data = json_dumps(content, cls=encoding.SchedyJSONEncoder)
+        response = self.core.authenticated_request('POST', url, data=data)
+
+        if response.status_code == requests.codes.conflict:
+            raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
+        else:
+            errors._handle_response_errors(response)
+        return Project(self.core, id_, name)
+
+    def delete(self, id_):
+        url = self.core.routes.project(id_)
 
         response = self.core.authenticated_request('DELETE', url)
         errors._handle_response_errors(response)
@@ -67,46 +61,30 @@ class Projects(object):
 
 class Project(object):
 
-    def __init__(self, core, desc):
+    def __init__(self, core, id_, name):
         self.core = core
-        self.desc = desc
-        self.id = desc['id']
-        self.experiments = Experiments(self.core, self.id)
+        self.id_ = id_
+        self.name = name
+        self.experiments = Experiments(self.core, self.id_)
 
-    def to_def(self):
-        return self.desc
-
-    def add_experiment(self, name, params=None, metrics=None):
+    def create_experiment(self, *args, **kwargs):
         """
         Adds an experiment to the Schedy service. Use this function to create
         new experiments.
-
-        Args:
-            exp (schedy.Experiment): The experiment to add.
-
         """
-
-        exp = Experiment(self.core, self.id, name, params, metrics)
-
-        url = self.core.routes.experiments(self.id)
-
-        data = json_dumps(exp.to_def(), cls=encoding.SchedyJSONEncoder)
-        response = self.core.authenticated_request('POST', url, data=data)
-        # Handle code 412: Precondition failed
-
-        if response.status_code == requests.codes.precondition_failed:
-            raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
-        else:
-            errors._handle_response_errors(response)
-        exp._db = self
+        return self.experiments.create(self, *args, **kwargs)
 
     def get_experiment(self, name):
         self.experiments.get(name=name)
 
     def delete_experiment(self, name):
-        url = self.core.routes.experiment(self.id, name)
+        url = self.core.routes.experiment(self.id_, name)
         response = self.core.authenticated_request('DELETE', url)
         errors._handle_response_errors(response)
 
     def get_experiments(self):
         return self.experiments.get_all()
+
+    @classmethod
+    def _from_description(cls, core, description):
+        return cls(core, description['id'], description['name'])
