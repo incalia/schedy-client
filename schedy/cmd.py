@@ -11,7 +11,6 @@ import stat
 import errno
 import schedy
 
-from requests.compat import urljoin
 from tabulate import tabulate
 from six.moves import input
 from .compat import json_dumps
@@ -69,56 +68,56 @@ def cmd_add(args):
 
 
 def setup_rm(subparsers):
-    parser = subparsers.add_parser('rm', help='Remove an experiment or a job.')
+    parser = subparsers.add_parser('rm', help='Remove an experiment or a trial.')
     parser.set_defaults(func=cmd_rm)
     parser.add_argument('experiment', help='Name of the experiment.')
-    parser.add_argument('job', nargs='?', help='Name of the job.')
+    parser.add_argument('trial', nargs='?', help='Name of the trial.')
     parser.add_argument('-f', '--force', action='store_true', help='Don\'t ask for confirmation.')
 
 
 def cmd_rm(args):
     db = schedy.Client(config_path=args.config)
     exp = db.get_experiment(args.experiment)
-    if args.job is None:
+    if args.trial is None:
         if not args.force:
             print_exp(exp)
-            confirmation = input('Are you sure you want to remove {} and all its jobs? [y/N] '.format(exp.name))
+            confirmation = input('Are you sure you want to remove {} and all its trials? [y/N] '.format(exp.name))
             if confirmation.lower() != 'y':
                 print('{} was not removed.'.format(exp.name))
                 return
         exp.delete()
     else:
-        job = exp.get_job(args.job)
+        trial = exp.get_trial(args.trial)
         if not args.force:
-            print_job(job)
-            confirmation = input('Are you sure you want to remove {}? [y/N] '.format(job.job_id))
+            print_trial(trial)
+            confirmation = input('Are you sure you want to remove {}? [y/N] '.format(trial.trial_id))
             if confirmation.lower() != 'y':
-                print('{} was not removed.'.format(job.job_id))
+                print('{} was not removed.'.format(trial.trial_id))
                 return
-        job.delete()
+        trial.delete()
 
 
 def setup_show(subparsers):
-    parser = subparsers.add_parser('show', help='Show an experiment/a job.')
+    parser = subparsers.add_parser('show', help='Show an experiment/a trial.')
     parser.set_defaults(func=cmd_show)
     parser.add_argument('experiment', help='Name for the new experiment.')
-    parser.add_argument('job', nargs='?', help='Name of the job.')
+    parser.add_argument('trial', nargs='?', help='Name of the trial.')
 
 
 def cmd_show(args):
     db = schedy.Client(config_path=args.config)
     exp = db.get_experiment(args.experiment)
-    if args.job is None:
+    if args.trial is None:
         print_exp(exp)
     else:
-        job = exp.get_job(args.job)
-        print_job(job)
+        trial = exp.get_trial(args.trial)
+        print_trial(trial)
 
 
 def setup_list(subparsers):
-    parser = subparsers.add_parser('list', help='List experiments/jobs (by default, lists all experiments).')
+    parser = subparsers.add_parser('list', help='List experiments/trials (by default, lists all experiments).')
     parser.set_defaults(func=cmd_list, parser=parser)
-    parser.add_argument('experiment', nargs='?', help='Name of the experiment whose jobs will be listed.')
+    parser.add_argument('experiment', nargs='?', help='Name of the experiment whose trials will be listed.')
     parser.add_argument('-t', '--table', action='store_true', help='Long description, as a table.')
     parser.add_argument('-p', '--paragraph', action='store_true', help='Long description, as a series of paragraphs.')
     parser.add_argument('-s', '--sort', action='append', help='Field by which we should sort. You can specify multiple fields using this argument multiple times.')
@@ -133,8 +132,8 @@ def cmd_list(args):
         table = exp_table(experiments)
     else:
         exp = db.get_experiment(args.experiment)
-        jobs = exp.all_jobs()
-        table = job_table(jobs)
+        trials = exp.all_trials()
+        table = trial_table(trials)
     if args.sort is not None:
         try:
             table.sort(args.sort, reverse=args.decreasing)
@@ -153,12 +152,12 @@ def cmd_list(args):
 
 
 def setup_push(subparsers):
-    parser = subparsers.add_parser('push', help='Manually add a job to an existing experiment.')
+    parser = subparsers.add_parser('push', help='Manually add a trial to an existing experiment.')
     parser.set_defaults(func=cmd_push)
-    parser.add_argument('experiment', help='Name of the experiment for the job.')
-    parser.add_argument('-s', '--status', choices=(schedy.Job.QUEUED, schedy.Job.RUNNING, schedy.Job.DONE, schedy.Job.CRASHED, schedy.Job.PRUNED), help='Status of the job.')
-    parser.add_argument('-r', '--results', nargs='+', help='Optional results for the job. Each result must be provided as a pair: name value. value must be a valid JSON value. For example: -r accuracy 0.9 loss_history \'[0.9, 0.8, 0.7]\'')
-    parser.add_argument('-p', '--hyperparameters', nargs='+', required=True, help='Hyperparameters for the job. Each hyperparameter must be provided as a pair: name value. value must be a valid JSON value. For example: -p learning_rate 0.01 num_layers 3 size_layers \'[512, 1024, 512]\'')
+    parser.add_argument('experiment', help='Name of the experiment for the trial.')
+    parser.add_argument('-s', '--status', choices=(schedy.Trial.QUEUED, schedy.Trial.RUNNING, schedy.Trial.DONE, schedy.Trial.CRASHED, schedy.Trial.PRUNED), help='Status of the trial.')
+    parser.add_argument('-r', '--results', nargs='+', help='Optional results for the trial. Each result must be provided as a pair: name value. value must be a valid JSON value. For example: -r accuracy 0.9 loss_history \'[0.9, 0.8, 0.7]\'')
+    parser.add_argument('-p', '--hyperparameters', nargs='+', required=True, help='Hyperparameters for the trial. Each hyperparameter must be provided as a pair: name value. value must be a valid JSON value. For example: -p learning_rate 0.01 num_layers 3 size_layers \'[512, 1024, 512]\'')
     parser.set_defaults(parser=parser)
 
 
@@ -198,8 +197,8 @@ def cmd_push(args):
             args.parser.error('Invalid value for hyperparameter {} ({!r}).'.format(name, e))
     kwargs['hyperparameters'] = hyperparameters
     exp = db.get_experiment(args.experiment)
-    job = exp.add_job(**kwargs)
-    print_job(job)
+    trial = exp.add_trial(**kwargs)
+    print_trial(trial)
 
 
 def setup_gen_token(subparsers):
@@ -251,7 +250,7 @@ def cmd_gen_token(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')
+    parser = argparse.ArgumentParser(description='Manage your Schedy trials.')
     parser.add_argument('--config', type=str, help='Schedy configuration file.')
     subparsers = parser.add_subparsers(title='Commands', dest='command')
     subparsers.required = True
@@ -324,6 +323,7 @@ class TableData(object):
 
     def sort(self, fields, reverse=False):
         indices = self._get_fields_indices(fields)
+
         def key_func(row):
             key = tuple()
             for idx in indices:
@@ -379,17 +379,17 @@ def exp_table(experiments):
     return data
 
 
-def job_table(jobs):
+def trial_table(trials):
     data = TableData()
-    for job in jobs:
+    for trial in trials:
         row = {
-            (DEFAULT_CATEGORY, 'id'): job.job_id,
-            (DEFAULT_CATEGORY, 'status'): job.status,
+            (DEFAULT_CATEGORY, 'id'): trial.trial_id,
+            (DEFAULT_CATEGORY, 'status'): trial.status,
         }
-        for name, value in job.hyperparameters.items():
+        for name, value in trial.hyperparameters.items():
             row[('hyperparameter', name)] = value
-        if job.results is not None:
-            for name, value in job.results.items():
+        if trial.results is not None:
+            for name, value in trial.results.items():
                 row[('result', name)] = value
         data.add_row(row)
     return data
@@ -399,10 +399,9 @@ def print_exp(exp):
     exp_table([exp]).print_paragraphs()
 
 
-def print_job(job):
-    job_table([job]).print_paragraphs()
+def print_trial(trial):
+    trial_table([trial]).print_paragraphs()
 
 
 if __name__ == '__main__':
     main()
-

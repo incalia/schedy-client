@@ -23,8 +23,8 @@ becomes as simple as this:
    db = schedy.SchedyDB()
    exp = db.get_experiment('My Task')
    while True:
-      with exp.next_job() as job:
-         my_train_function(job)
+      with exp.next_trial() as trial:
+         my_train_function(trial)
 
 You can follow the evolution of your experiments thanks to our `online dashboard
 <https://schedy.io/>`_.

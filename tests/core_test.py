@@ -6,7 +6,7 @@ import datetime
 import httpretty
 
 
-class TestSchedyDB(TestCase):
+class TestCore(TestCase):
 
     def setUp(self):
         config = {'email': 'test@schedy.io', 'token': 'TOKEN', 'type': 'apiToken', 'root': 'http://fake.schedy.io/'}

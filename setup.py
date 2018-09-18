@@ -15,6 +15,9 @@ setup(
         'tabulate>=0.8.2',
         'six>=1.11.0',
     ],
+    tests_require=[
+        'httpretty>=0.9.5',
+    ],
     packages=['schedy'],
     entry_points={
         'console_scripts': [
