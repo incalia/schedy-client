@@ -7,85 +7,12 @@ import functools
 import logging
 import requests
 
-from . import errors
+from . import errors, encoding
+from .compat import json_dumps
 from .pagination import PageObjectsIterator
 from .trials import Trial
 
 logger = logging.getLogger(__name__)
-
-
-class Experiment(object):
-    def __init__(self, core, project_id, name, params, metrics):
-        assert params is None or isinstance(params, list)
-        assert metrics is None or isinstance(metrics, list)
-
-        self.core = core
-        self.name = name
-        self.params = list(set(params)) or []
-        self.metrics = list(set(metrics)) or []
-        self.project_id = project_id
-
-    @classmethod
-    def from_def(cls, core, definition):
-        try:
-            # {'projectID': 'project_000', 'name': 'project_000_exp_000', 'hyperparameters': [{'name': 'layer sizes'}
-            project_id = definition['projectID']
-            name = definition['name']
-            params = [d['name'] for d in definition['hyperparameters']]
-            metrics = definition['metricsName']
-
-            return cls(core, project_id, name, params, metrics)
-        except (ValueError, KeyError) as e:
-            raise_from(ValueError('Invalid map definition for experiment.'), e)
-
-    def add_parameter(self, name):
-        if name not in self.params:
-            self.params += [{'name': name}]
-
-    def add_metric(self, name):
-        if name not in self.metrics:
-            self.metrics += [name]
-
-    def to_def(self):
-        return {
-            'name': self.name,
-            'hyperparameters': [{'name': p} for p in self.params],
-            'metricsName': self.metrics,
-        }
-
-    def create_trial(self, hyperparameters, status=None, metrics=None, metadata=None):
-        url = self.core.routes.trials(self.project_id, self.name)
-        trial = Trial(self.project_id, self.name, None, hyperparameters, metrics, status, metadata)
-        print(trial.to_def().to_json())
-        response = self.core.authenticated_request('POST', url, data=trial.to_def().to_json())
-        # Handle code 412: Precondition failed
-
-        if response.status_code == requests.codes.precondition_failed:
-            raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
-        else:
-            errors._handle_response_errors(response)
-
-    def describe_trial(self, trial_id):
-        url = self.core.routes.trial(self.project_id, self.name, trial_id)
-        response = self.core.authenticated_request('GET', url)
-        return Trial.from_def(response.json())
-
-    def update_trial(self, trial_id, hyperparameters=None, status=None, metrics=None, metadata=None):
-        # url = self.core.routes.trial(self.project_id, self.name, trial_id)
-        # trial = Trial(self.project_id, self.name, trial_id, hyperparameters, metrics, status, metadata)
-        # response = self.core.authenticated_request('PATCH', url, data=trial.to_def().to_json())
-        # TODO
-        raise NotImplementedError()
-
-    def disable_trial(self, trial_id):
-        return self.core.authenticated_request('DELETE', self.core.routes.trial(self.project_id, self.name, trial_id))
-
-    def get_trials(self):
-        return PageObjectsIterator(
-            reqfunc=functools.partial(self.core.authenticated_request, 'GET', self.core.routes.trials(self.project_id, self.name)),
-            obj_creation_func=Trial.from_def,
-            expected_field='trials'
-        )
 
 
 class Experiments(object):
@@ -95,11 +22,14 @@ class Experiments(object):
 
     def create(self, name, hyperparameters, metrics):
         url = self.core.routes.experiments(self.id_)
-        data = experiment.to_def().to_json()
+        content = {
+            'name': str(name),
+            'hyperparameters': [{'name': str(paramName) for paramName in hyperparameters}],
+            'metrics': [str(metric) for metric in metrics],
+        }
+        data = json_dumps(content, cls=encoding.JSONEncoder)
         response = self.core.authenticated_request('POST', url, data=data)
-        # Handle code 412: Precondition failed
-
-        if response.status_code == requests.codes.precondition_failed:
+        if response.status_code == requests.codes.conflict:
             raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
         else:
             errors._handle_response_errors(response)
@@ -125,13 +55,7 @@ class Experiments(object):
             content = dict(response.json())
         except ValueError as e:
             raise_from(errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None), e)
-        try:
-            # TODO: fix this.
-            exp = Experiment(content)
-        except ValueError as e:
-            raise_from(errors.ServerError('Response contains an invalid experiment', None), e)
-
-        return exp
+        return Experiment._from_description(self.core, content)
 
     def get_all(self):
         """
@@ -142,8 +66,54 @@ class Experiments(object):
         """
         return PageObjectsIterator(
             reqfunc=functools.partial(self.core.authenticated_request, 'GET', self.core.routes.experiments(self.project_id)),
-            obj_creation_func=functools.partial(Experiment.from_def, self.core),
+            obj_creation_func=functools.partial(Experiment._from_description, self.core),
             expected_field='experiments'
+        )
+
+
+class Experiment(object):
+    def __init__(self, core, project_id, name, hyperparameters, metrics):
+        self.core = core
+        self.project_id = project_id
+        self.name = name
+        self.hyperparameters = hyperparameters
+        self.metrics = metrics
+
+    @classmethod
+    def _from_description(cls, core, description):
+        try:
+            project_id = description['projectID']
+            name = description['name']
+            hyperparameters = [d['name'] for d in description['hyperparameters']]
+            metrics = description['metricsName']
+
+            return cls(core, project_id, name, hyperparameters, metrics)
+        except (ValueError, KeyError) as e:
+            raise_from(ValueError('Invalid map definition for experiment.'), e)
+
+    def create_trial(self, *args, **kwargs):
+        return self.trials.create(*args, **kwargs)
+
+    def describe_trial(self, trial_id):
+        url = self.core.routes.trial(self.project_id, self.name, trial_id)
+        response = self.core.authenticated_request('GET', url)
+        return Trial.from_def(response.json())
+
+    def update_trial(self, trial_id, hyperparameters=None, status=None, metrics=None, metadata=None):
+        # url = self.core.routes.trial(self.project_id, self.name, trial_id)
+        # trial = Trial(self.project_id, self.name, trial_id, hyperparameters, metrics, status, metadata)
+        # response = self.core.authenticated_request('PATCH', url, data=trial.to_def().to_json())
+        # TODO
+        raise NotImplementedError()
+
+    def disable_trial(self, trial_id):
+        return self.core.authenticated_request('DELETE', self.core.routes.trial(self.project_id, self.name, trial_id))
+
+    def get_trials(self):
+        return PageObjectsIterator(
+            reqfunc=functools.partial(self.core.authenticated_request, 'GET', self.core.routes.trials(self.project_id, self.name)),
+            obj_creation_func=Trial.from_def,
+            expected_field='trials'
         )
 
 # import requests

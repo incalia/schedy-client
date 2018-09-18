@@ -55,9 +55,6 @@ class Projects(object):
         response = self.core.authenticated_request('DELETE', url)
         errors._handle_response_errors(response)
 
-    def __repr__(self):
-        return self.get_all()
-
 
 class Project(object):
 

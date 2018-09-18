@@ -202,14 +202,6 @@ class Core(object):
         return req
 
 
-class _Definition(object):
-    def __init__(self, d):
-        self.d = d
-
-    def to_json(self):
-        return json_dumps(self.d, cls=encoding.SchedyJSONEncoder)
-
-
 class Trial(object):
 
     def __init__(self, project_id=None, experiment_id=None, trial_id=None, hyperparameters=None, metrics=None,
