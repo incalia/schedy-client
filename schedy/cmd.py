@@ -42,7 +42,7 @@ def setup_add(subparsers):
 
 
 def cmd_add(args):
-    db = schedy.SchedyDB(config_path=args.config)
+    db = schedy.Client(config_path=args.config)
     if args.scheduler == 'manual':
         exp = schedy.ManualSearch(args.experiment, status=args.status)
     elif args.scheduler == 'random':
@@ -77,7 +77,7 @@ def setup_rm(subparsers):
 
 
 def cmd_rm(args):
-    db = schedy.SchedyDB(config_path=args.config)
+    db = schedy.Client(config_path=args.config)
     exp = db.get_experiment(args.experiment)
     if args.job is None:
         if not args.force:
@@ -106,7 +106,7 @@ def setup_show(subparsers):
 
 
 def cmd_show(args):
-    db = schedy.SchedyDB(config_path=args.config)
+    db = schedy.Client(config_path=args.config)
     exp = db.get_experiment(args.experiment)
     if args.job is None:
         print_exp(exp)
@@ -127,7 +127,7 @@ def setup_list(subparsers):
 
 
 def cmd_list(args):
-    db = schedy.SchedyDB(config_path=args.config)
+    db = schedy.Client(config_path=args.config)
     if args.experiment is None:
         experiments = db.get_experiments()
         table = exp_table(experiments)
@@ -163,7 +163,7 @@ def setup_push(subparsers):
 
 
 def cmd_push(args):
-    db = schedy.SchedyDB(config_path=args.config)
+    db = schedy.Client(config_path=args.config)
     kwargs = dict()
     # Status
     if args.status is not None:
@@ -219,8 +219,8 @@ def cmd_gen_token(args):
         'token': args.password or getpass.getpass('Password: ')
     }
 
-    db = schedy.SchedyDB(config_override=config)
-    response = db._authenticated_request('POST', url=db.routes.generate_token)
+    db = schedy.Client(config_override=config)
+    response = db.core.authenticated_request('POST', url=db.core.routes.generate_token)
     schedy.errors._handle_response_errors(response)
     new_content = response.json()
     new_content.update({
@@ -230,7 +230,7 @@ def cmd_gen_token(args):
     })
 
     if args.config is None:
-        config_path = schedy.core._default_config_path()
+        config_path = schedy.Config._default_config_path
     else:
         config_path = args.config
     config_dir = os.path.dirname(config_path)
@@ -250,7 +250,7 @@ def cmd_gen_token(args):
     print('Your token has been saved to {}.'.format(config_path))
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')
     parser.add_argument('--config', type=str, help='Schedy configuration file.')
     subparsers = parser.add_subparsers(title='Commands', dest='command')
@@ -261,7 +261,7 @@ def main():
     setup_list(subparsers)
     setup_push(subparsers)
     setup_gen_token(subparsers)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     args.func(args)
 
 

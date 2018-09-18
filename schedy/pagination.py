@@ -9,8 +9,12 @@ from . import errors
 
 _EXPECTED_PAGE_KEYS = {'items', 'next'}
 
+
 class PageObjectsIterator(object):
-    def __init__(self, reqfunc, obj_creation_func):
+
+    def __init__(self, reqfunc, obj_creation_func, expected_field):
+        self.expected_field = expected_field
+        self._EXPECTED_PAGE_KEYS = ['end', self.expected_field]
         self._reqfunc = reqfunc
         self._create_obj = obj_creation_func
         self._next_token = None
@@ -48,12 +52,12 @@ class PageObjectsIterator(object):
         if result.keys() > _EXPECTED_PAGE_KEYS:
             warnings.warn('Unexpected page keys: {}.'.format(result.keys() - _EXPECTED_PAGE_KEYS))
         try:
-            self._items = list(result['items'])
-            next_token = result.get('next')
+            self._items = list(result[self.expected_field])
+            next_token = result.get('end')
             if next_token is not None:
                 self._next_token = str(next_token)
             else:
                 self._next_token = None
         except (ValueError, KeyError) as e:
-            raise_from(errors.UnhandledResponseError('Invalid page received.'), e)
+            raise_from(errors.UnhandledResponseError('Invalid page received.', None), e)
 
