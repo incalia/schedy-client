@@ -37,8 +37,8 @@ class Projects(object):
     def create(self, id_, name):
         url = self.core.routes.projects
         content = {
-            'projectID': id_,
-            'name': name
+            'projectID': str(id_),
+            'name': str(name),
         }
         data = json_dumps(content, cls=encoding.SchedyJSONEncoder)
         response = self.core.authenticated_request('POST', url, data=data)
