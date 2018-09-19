@@ -30,7 +30,7 @@ class TestProject(TestCase):
         responses.add(
             responses.POST,
             self.core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":1537432172}',
+            body='{"token":"TEST TOKEN","expiresAt":1539961812}',
             content_type='application/json',
             status=requests.codes.ok
         )
@@ -63,7 +63,7 @@ class TestProject(TestCase):
         responses.add(
             responses.POST,
             self.core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":1537432172}',
+            body='{"token":"TEST TOKEN","expiresAt":1539961812}',
             content_type='application/json',
             status=requests.codes.ok
         )
@@ -96,7 +96,7 @@ class TestProject(TestCase):
         responses.add(
             responses.POST,
             self.core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":1537432172}',
+            body='{"token":"TEST TOKEN","expiresAt":1539961812}',
             content_type='application/json',
             status=requests.codes.ok
         )
@@ -119,7 +119,7 @@ class TestProject(TestCase):
         responses.add(
             responses.POST,
             self.core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":1537432172}',
+            body='{"token":"TEST TOKEN","expiresAt":1539961812}',
             content_type='application/json',
             status=requests.codes.ok
         )

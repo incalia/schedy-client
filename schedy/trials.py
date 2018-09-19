@@ -8,6 +8,8 @@ import functools
 from .pagination import PageObjectsIterator
 from . import errors, encoding
 from .compat import json_dumps
+from .core import DataEqMixin
+import requests
 
 
 class Trials(object):
@@ -59,7 +61,7 @@ class Trials(object):
         errors._handle_response_errors(response)
 
 
-class Trial(object):
+class Trial(DataEqMixin):
     #: Status of a queued trial. Queued trials are returned when calling :py:meth:`schedy.Experiment.next_trial`.
     QUEUED = 'QUEUED'
     #: Status of a trial that is currently running on a worker.
@@ -92,7 +94,7 @@ class Trial(object):
             results (dict): A dictionnary of results values.
             etag (str): Value of the entity tag sent by the backend.
         """
-        self.core = core
+        self._core = core
         self.project_id = project_id
         self.experiment_name = experiment_name
         self.id_ = id_
@@ -158,7 +160,7 @@ class Trial(object):
                 raise errors.UnsafeUpdateError('Cannot perform safe update: previous ETag is None.', -1)
             else:
                 headers['If-Match'] = self.etag
-        url = self.core.routes.trial(self.project_id, self.experiment_name, self.id_)
+        url = self._core.routes.trial(self.project_id, self.experiment_name, self.id_)
         content = {
             'hyperparameters': {str(k): encoding._scalar_definition(v) for k, v in self.hyperparameters.items()},
             'status': str(self.status),
@@ -168,7 +170,7 @@ class Trial(object):
         if self.metadata:
             content['metadata'] = {str(k): encoding._scalar_definition(v) for k, v in self.metadata.items()}
         data = json_dumps(content, cls=encoding.JSONEncoder)
-        response = self.core.authenticated_request('PUT', url, data=data, headers=headers)
+        response = self._core.authenticated_request('PUT', url, data=data, headers=headers)
         errors._handle_response_errors(response)
         etag = response.headers.get('ETag')
         if etag is not None:
@@ -190,13 +192,12 @@ class Trial(object):
             ensure (bool): If true, an exception will be raised if the trial was
                 deleted before this call.
         """
-        db = self.experiment._db
-        url = db._trial_url(self.experiment.name, self.id_)
+        url = self._core.routes.trial(self.project_id, self.experiment_name, self.id_)
         if ensure:
             headers = {'If-Match': '*'}
         else:
             headers = dict()
-        response = db._authenticated_request('DELETE', url, headers=headers)
+        response = self._core.authenticated_request('DELETE', url, headers=headers)
         errors._handle_response_errors(response)
 
     def __enter__(self):
