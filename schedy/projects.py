@@ -51,7 +51,6 @@ class Projects(object):
 
     def delete(self, id_):
         url = self.core.routes.project(id_)
-
         response = self.core.authenticated_request('DELETE', url)
         errors._handle_response_errors(response)
 

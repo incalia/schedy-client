@@ -11,10 +11,6 @@ from . import errors, encoding
 from .compat import json_dumps
 
 
-def _check_status(status):
-    return status in (Trial.QUEUED, Trial.RUNNING, Trial.CRASHED, Trial.DONE)
-
-
 class Trials(object):
     def __init__(self, core, project_id, experiment_name):
         self.core = core
@@ -134,9 +130,9 @@ class Trial(object):
         except (ValueError, KeyError, TypeError) as e:
             raise_from(ValueError('Invalid map definition for trial.'), e)
 
-    def put(self, safe=True):
+    def update(self, safe=True):
         """
-        Puts a trial in the database, either by creating it or by updating it.
+        Updates the trial in the database.
 
         This function is always called at the end of a ``with`` block.
 
@@ -146,18 +142,29 @@ class Trial(object):
                 the meantime. For example, this ensures that no two workers
                 overwrite each other's work on this trial because they are working
                 in parallel.
+
+        Raises:
+            schedy.errors.UnsafeUpdateError: If ``safe`` is ``True`` and the
+                trial has been modified by another source since it was
+                retrieved.
         """
-        db = self.experiment._db
-        url = db._trial_url(self.experiment.name, self.id_)
-        map_def = self._to_map_definition()
-        data = json_dumps(map_def, cls=encoding.SchedyJSONEncoder)
         headers = dict()
         if safe:
             if self.etag is None:
-                headers['If-None-Match'] = '*'
+                raise errors.UnsafeUpdateError('Cannot perform safe update: previous ETag is None.', -1)
             else:
                 headers['If-Match'] = self.etag
-        response = db._authenticated_request('PUT', url, data=data, headers=headers)
+        url = self.core.routes.trial(self.project_id, self.experiment_name, self.id_)
+        content = {
+            'hyperparameters': {str(k): encoding._scalar_definition(v) for k, v in self.hyperparameters.items()},
+            'status': str(self.status),
+        }
+        if self.metrics:
+            content['metrics'] = {str(k): encoding._float_definition(v) for k, v in self.metrics.items()}
+        if self.metadata:
+            content['metadata'] = {str(k): encoding._scalar_definition(v) for k, v in self.metadata.items()}
+        data = json_dumps(content, cls=encoding.SchedyJSONEncoder)
+        response = self.core.authenticated_request('PUT', url, data=data, headers=headers)
         errors._handle_response_errors(response)
         etag = response.headers.get('ETag')
         if etag is not None:
@@ -169,7 +176,7 @@ class Trial(object):
         if another worker tried to do so before this one.
         """
         self.status = Trial.RUNNING
-        self.put()
+        self.update()
 
     def delete(self, ensure=True):
         """
@@ -219,72 +226,10 @@ class Trial(object):
         ``CRASHED`` if an exception was raised in the ``with`` block.
         Otherwise, it will try to set the trial status as ``DONE``. It will also
         push all the updates that were made locally to the Schedy service (by
-        calling :py:meth:`Trial.put` for you).
+        calling :py:meth:`Trial.update` for you).
         """
         if exc_type is not None:
             self.status = Trial.CRASHED
         else:
             self.status = Trial.DONE
-        self.put()
-
-    @classmethod
-    def _from_map_definition(cls, experiment, map_def, etag=None):
-        try:
-            trial_id = str(map_def['id'])
-            experiment_name = str(map_def['experiment'])
-            status = str(map_def['status'])
-            hyperparameters = map_def.get('hyperparameters')
-            if hyperparameters is not None:
-                hyperparameters = dict(hyperparameters)
-            else:
-                hyperparameters = dict()
-            results = map_def.get('results')
-            if results is not None:
-                results = dict(results)
-            else:
-                results = dict()
-        except (KeyError, ValueError) as e:
-            raise_from(ValueError('Invalid trial map definition.'), e)
-        if experiment_name != experiment.name:
-            raise ValueError('Inconsistent experiment name for trial: expected {}, found {}.'.format(experiment.name, experiment_name))
-        if not _check_status(status):
-            raise ValueError('Invalid or unknown status value: {}.'.format(status))
-        return cls(
-            id_=trial_id,
-            experiment=experiment,
-            status=status,
-            hyperparameters=hyperparameters,
-            results=results,
-            etag=etag
-        )
-
-    def _to_map_definition(self):
-        map_def = {
-            'status': str(self.status),
-        }
-        if len(self.hyperparameters) > 0:
-            map_def['hyperparameters'] = self.hyperparameters
-        if self.results is not None and len(self.results) > 0:
-            map_def['results'] = self.results
-        return map_def
-
-
-def _make_trial(experiment, data, etag=None):
-    try:
-        trial_data = dict(data)
-    except ValueError as e:
-        raise_from(errors.UnhandledResponseError('Excepting the description of a trial as a dict, received type {}.'.format(type(data)), None), e)
-    try:
-        trial = Trial._from_map_definition(experiment, trial_data, etag)
-    except ValueError as e:
-        raise_from(errors.UnhandledResponseError('Response contains an invalid trial.', None), e)
-    return trial
-
-
-def _trial_from_response(experiment, response):
-    try:
-        content = response.json()
-    except ValueError as e:
-        raise_from(errors.UnhandledResponseError('Response contains invalid JSON:\n' + response.text, None), e)
-    return _make_trial(experiment, content, response.headers.get('ETag'))
-
+        self.update()
