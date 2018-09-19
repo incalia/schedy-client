@@ -27,10 +27,10 @@ except ImportError:
     pass
 
 
-class SchedyJSONEncoder(json.JSONEncoder):
+class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         obj = normalize_type(obj)
-        return super(SchedyJSONEncoder, self).default(obj)
+        return super(JSONEncoder, self).default(obj)
 
 
 def normalize_type(obj):

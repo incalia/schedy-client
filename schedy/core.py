@@ -14,7 +14,6 @@ from requests.packages.urllib3.util.retry import Retry
 from six import raise_from
 
 from . import errors
-from .projects import Projects
 from .jwt import JWTTokenAuth
 
 logger = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ class _Routes(object):
 
     @root.setter
     def root(self, value):
-        raise AttributeError("Cannot set `routes` attribute")
+        raise AttributeError("Cannot set `root` attribute")
 
 
 class Config(object):
@@ -104,6 +103,8 @@ class Config(object):
 class Core(object):
 
     def __init__(self, config):
+
+        assert isinstance(config, Config)
 
         self.config = config
 
@@ -208,34 +209,17 @@ class Core(object):
         return req
 
 
-class Client(object):
+class DataEqMixin(object):
+    def __eq__(self, other):
+        return self is other or (isinstance(other, type(self)) and vars(self) == vars(other))
 
-    def __init__(self, config_path=None, config_override=None):
-        """
-           Client is the central component of Schedy. It represents your
-           connection the the Schedy service.
+    def __ne__(self, other):
+        return not (self == other)
 
-           Args:
-               config_path (str or file-object): Path to the client configuration file. This file
-                   contains your credentials (email, API token). By default,
-                   ~/.schedy/client.json is used. See :ref:`setup` for
-                   instructions about how to use this file.
-               config_override (dict): Content of the configuration. You can use this to
-                   if you do not want to use a configuration file.
-        """
-        self.config = Config(config_path, config_override)
-        self.core = Core(self.config)
+    def __hash__(self):
+        return hash(tuple(sorted(vars(self).items())))
 
-        self.projects = Projects(self.core)
+    def __repr__(self):
+        return type(self).__name__ + '{\n' + '\n  '.join(
+            '{}: {!r}'.format(key, value) for key, value in sorted(vars(self).items())) + '\n}'
 
-    def create_project(self, project_id, project_name):
-        return self.projects.create(project_id, project_name)
-
-    def get_project(self, project_id):
-        return self.projects.get(project_id)
-
-    def get_projects(self):
-        return self.projects.get_all()
-
-    def disable_project(self, project_id):
-        return self.projects.disable(project_id)

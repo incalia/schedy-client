@@ -11,6 +11,7 @@ from . import errors, encoding
 from .compat import json_dumps
 from .pagination import PageObjectsIterator
 from .trials import Trial
+from .core import DataEqMixin
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +22,11 @@ class Experiments(object):
         self.project_id = project_id
 
     def create(self, name, hyperparameters, metrics):
-        url = self.core.routes.experiments(self.id_)
+        url = self.core.routes.experiments(self.project_id)
         content = {
             'name': str(name),
-            'hyperparameters': [{'name': str(paramName) for paramName in hyperparameters}],
-            'metrics': [str(metric) for metric in metrics],
+            'hyperparameters': [{'name': str(paramName)} for paramName in hyperparameters],
+            'metricsName': [str(metric) for metric in metrics],
         }
         data = json_dumps(content, cls=encoding.JSONEncoder)
         response = self.core.authenticated_request('POST', url, data=data)
@@ -76,7 +77,7 @@ class Experiments(object):
         errors._handle_response_errors(response)
 
 
-class Experiment(object):
+class Experiment(DataEqMixin):
     def __init__(self, core, project_id, name, hyperparameters, metrics):
         self.core = core
         self.project_id = project_id

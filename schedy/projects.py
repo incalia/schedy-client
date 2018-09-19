@@ -68,10 +68,10 @@ class Project(object):
         Adds an experiment to the Schedy service. Use this function to create
         new experiments.
         """
-        return self.experiments.create(self, *args, **kwargs)
+        return self.experiments.create(*args, **kwargs)
 
     def get_experiment(self, name):
-        self.experiments.get(name=name)
+        return self.experiments.get(name=name)
 
     def delete_experiment(self, name):
         url = self.core.routes.experiment(self.id_, name)

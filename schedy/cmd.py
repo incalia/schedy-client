@@ -219,7 +219,7 @@ def cmd_gen_token(args):
     }
 
     db = schedy.Client(config_override=config)
-    response = db.core.authenticated_request('POST', url=db.core.routes.generate_token)
+    response = db._core.authenticated_request('POST', url=db._core.routes.generate_token)
     schedy.errors._handle_response_errors(response)
     new_content = response.json()
     new_content.update({
