@@ -3,12 +3,60 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from six import raise_from
+import requests.codes
+import functools
+
+from .pagination import PageObjectsIterator
 from . import errors, encoding
 from .compat import json_dumps
 
 
 def _check_status(status):
-    return status in (Trial.QUEUED, Trial.RUNNING, Trial.CRASHED, Trial.PRUNED, Trial.DONE)
+    return status in (Trial.QUEUED, Trial.RUNNING, Trial.CRASHED, Trial.DONE)
+
+
+class Trials(object):
+    def __init__(self, core, project_id, experiment_name):
+        self.core = core
+        self.project_id = project_id
+        self.experiment_name = experiment_name
+
+    def create(self, hyperparameters, metrics=None, status=None, metadata=None):
+        url = self.core.routes.trials(self.project_id, self.experiment_name)
+        content = {
+            'hyperparameters': {str(k): encoding._scalar_definition(v) for k, v in hyperparameters.items()},
+            'status': str(status) if status is not None else Trial.QUEUED,
+        }
+        if metrics:
+            content['metrics'] = {str(k): encoding._float_definition(v) for k, v in metrics.items()}
+        if metadata:
+            content['metadata'] = {str(k): encoding._scalar_definition(v) for k, v in metadata.items()}
+        data = json_dumps(content, cls=encoding.JSONEncoder)
+
+        response = self.core.authenticated_request('POST', url, data=data)
+        if response.status_code == requests.codes.conflict:
+            raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
+        else:
+            errors._handle_response_errors(response)
+        return Trial._from_description(self.core, response, response.headers.get('ETag'))
+
+    def get(self, id_):
+        url = self.core.routes.trial(self.project_id, self.experiment_name, id_)
+        response = self.core.authenticated_request('GET', url)
+        errors._handle_response_errors(response)
+        try:
+            content = dict(response.json())
+        except ValueError as e:
+            raise_from(errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None), e)
+        return Trial._from_description(self.core, content, response.headers.get('ETag'))
+
+    def get_all(self):
+        url = self.core.routes.trials(self.project_id, self.experiment_name)
+        return PageObjectsIterator(
+            reqfunc=functools.partial(self.core.authenticated_request, 'GET', url),
+            obj_creation_func=functools.partial(Trial._from_description, self.core),
+            expected_field='trials'
+        )
 
 
 class Trial(object):
@@ -18,12 +66,10 @@ class Trial(object):
     RUNNING = 'RUNNING'
     #: Status of trial that was being processed by a worker, but the worker crashed before completing the trial.
     CRASHED = 'CRASHED'
-    #: Status of a trial that was abandonned because it was not worth working on.
-    PRUNED = 'PRUNED'
     #: Status of a completed trial.
     DONE = 'DONE'
 
-    def __init__(self, trial_id, experiment, hyperparameters, status=QUEUED, results=dict(), etag=None):
+    def __init__(self, core, project_id, experiment_name, id_, status, hyperparameters, metrics=None, metadata=None, etag=None):
         """
         Represents a trial instance belonging to an experiment. You should not
         need to create it by hand. Use :py:meth:`schedy.Experiment.add_trial`,
@@ -46,15 +92,47 @@ class Trial(object):
             results (dict): A dictionnary of results values.
             etag (str): Value of the entity tag sent by the backend.
         """
-        self.trial_id = trial_id
-        self.experiment = experiment
+        self.core = core
+        self.project_id = project_id
+        self.experiment_name = experiment_name
+        self.id_ = id_
         self.status = status
         self.hyperparameters = hyperparameters
-        self.results = results
+        self.metrics = metrics or dict()
+        self.metadata = metadata or dict()
         self.etag = etag
 
-    def __str__(self):
-        return '{}(id={!r}, experiment={!r}, hyperparameters={!r})'.format(self.__class__.__name__, self.trial_id, self.experiment.name, self.hyperparameters)
+    @classmethod
+    def _from_description(cls, core, description, etag):
+        try:
+            project_id = description['projectID']
+            experiment_name = description['experimentName']
+            id_ = description['id']
+            status = str(description['status'])
+            hyperparameters = {
+                name: encoding._from_scalar_definition(value)
+                for name, value in description['hyperparameters'].items()
+            }
+            metrics = {
+                name: float(value)
+                for name, value in description.get('metrics', dict()).items()
+            }
+            metadata = {
+                name: encoding._from_scalar_definition(value)
+                for name, value in description.get('metadata', dict()).items()
+            }
+            return cls(core,
+                       project_id=project_id,
+                       experiment_name=experiment_name,
+                       id_=id_,
+                       status=status,
+                       hyperparameters=hyperparameters,
+                       metrics=metrics,
+                       metadata=metadata,
+                       etag=etag,
+                       )
+        except (ValueError, KeyError, TypeError) as e:
+            raise_from(ValueError('Invalid map definition for trial.'), e)
 
     def put(self, safe=True):
         """
@@ -70,7 +148,7 @@ class Trial(object):
                 in parallel.
         """
         db = self.experiment._db
-        url = db._trial_url(self.experiment.name, self.trial_id)
+        url = db._trial_url(self.experiment.name, self.id_)
         map_def = self._to_map_definition()
         data = json_dumps(map_def, cls=encoding.SchedyJSONEncoder)
         headers = dict()
@@ -102,7 +180,7 @@ class Trial(object):
                 deleted before this call.
         """
         db = self.experiment._db
-        url = db._trial_url(self.experiment.name, self.trial_id)
+        url = db._trial_url(self.experiment.name, self.id_)
         if ensure:
             headers = {'If-Match': '*'}
         else:
@@ -172,7 +250,7 @@ class Trial(object):
         if not _check_status(status):
             raise ValueError('Invalid or unknown status value: {}.'.format(status))
         return cls(
-            trial_id=trial_id,
+            id_=trial_id,
             experiment=experiment,
             status=status,
             hyperparameters=hyperparameters,

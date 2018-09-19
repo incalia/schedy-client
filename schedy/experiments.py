@@ -88,7 +88,7 @@ class Experiment(object):
             metrics = description['metricsName']
 
             return cls(core, project_id, name, hyperparameters, metrics)
-        except (ValueError, KeyError) as e:
+        except (ValueError, KeyError, TypeError) as e:
             raise_from(ValueError('Invalid map definition for experiment.'), e)
 
     def create_trial(self, *args, **kwargs):

@@ -14,8 +14,7 @@ from requests.compat import urljoin, quote as urlquote
 from requests.packages.urllib3.util.retry import Retry
 from six import raise_from
 
-from . import errors, encoding
-from .compat import json_dumps
+from . import errors
 from .projects import Projects
 from .jwt import JWTTokenAuth
 
