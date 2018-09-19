@@ -54,6 +54,11 @@ class Trials(object):
             expected_field='trials'
         )
 
+    def delete(self, id_):
+        url = self.core.routes.trial(self.project_id, self.experiment_name, id_)
+        response = self.core.authenticated_request('DELETE', url)
+        errors._handle_response_errors(response)
+
 
 class Trial(object):
     #: Status of a queued trial. Queued trials are returned when calling :py:meth:`schedy.Experiment.next_trial`.

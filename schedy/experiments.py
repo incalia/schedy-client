@@ -71,7 +71,7 @@ class Experiments(object):
         )
 
     def delete(self, name):
-        url = self.core.routes.experiment(self.project_, name)
+        url = self.core.routes.experiment(self.project_id, name)
         response = self.core.authenticated_request('DELETE', url)
         errors._handle_response_errors(response)
 
