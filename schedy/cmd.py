@@ -241,7 +241,7 @@ def cmd_gen_token(args):
                 raise
             pass
     with open(config_path, 'w') as config_file:
-        config_file.write(json_dumps(new_content, cls=schedy.encoding.SchedyJSONEncoder))
+        config_file.write(json_dumps(new_content, cls=schedy.encoding.JSONEncoder))
     try:
         os.chmod(config_path, stat.S_IRUSR | stat.S_IWUSR)
     except OSError:

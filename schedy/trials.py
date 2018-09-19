@@ -3,7 +3,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from six import raise_from
-import requests.codes
 import functools
 
 from .pagination import PageObjectsIterator
