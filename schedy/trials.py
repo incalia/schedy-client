@@ -167,7 +167,7 @@ class Trial(object):
             content['metrics'] = {str(k): encoding._float_definition(v) for k, v in self.metrics.items()}
         if self.metadata:
             content['metadata'] = {str(k): encoding._scalar_definition(v) for k, v in self.metadata.items()}
-        data = json_dumps(content, cls=encoding.SchedyJSONEncoder)
+        data = json_dumps(content, cls=encoding.JSONEncoder)
         response = self.core.authenticated_request('PUT', url, data=data, headers=headers)
         errors._handle_response_errors(response)
         etag = response.headers.get('ETag')

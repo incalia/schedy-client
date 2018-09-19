@@ -40,7 +40,7 @@ class Projects(object):
             'projectID': str(id_),
             'name': str(name),
         }
-        data = json_dumps(content, cls=encoding.SchedyJSONEncoder)
+        data = json_dumps(content, cls=encoding.JSONEncoder)
         response = self.core.authenticated_request('POST', url, data=data)
 
         if response.status_code == requests.codes.conflict:

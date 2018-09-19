@@ -374,7 +374,7 @@ def exp_table(experiments):
         }
         if isinstance(exp, schedy.RandomSearch):
             for name, dist in exp.distributions.items():
-                row[('hyperparameter', name)] = '{} ({})'.format(dist._FUNC_NAME, json_dumps(dist._args(), cls=schedy.encoding.SchedyJSONEncoder))
+                row[('hyperparameter', name)] = '{} ({})'.format(dist._FUNC_NAME, json_dumps(dist._args(), cls=schedy.encoding.JSONEncoder))
         data.add_row(row)
     return data
 
