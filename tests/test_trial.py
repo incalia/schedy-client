@@ -43,8 +43,12 @@ class TestTrial(TestCase):
         self.trial.etag = self.etag
         self.trial.update(safe=False)
 
-        expected_trial = Trial(self.core, self.project_id, self.exp_name, self.trial_id, 'CRASHED',
-        hyperparameters={'hp0': 0.5, 'hp1': 0}, metrics=self.metrics, metadata=self.metadata, etag=self.etag)
+        expected_trial = Trial(self.core, self.project_id, self.exp_name, self.trial_id,
+                               'CRASHED',
+                               hyperparameters={'hp0': 0.5, 'hp1': 0},
+                               metrics=self.metrics,
+                               metadata=self.metadata,
+                               etag=self.etag)
 
         self.assertEqual(expected_trial, self.trial)
 

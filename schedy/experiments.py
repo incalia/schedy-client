@@ -10,7 +10,7 @@ import requests
 from . import errors, encoding
 from .compat import json_dumps
 from .pagination import PageObjectsIterator
-from .trials import Trials, Trial
+from .trials import Trials
 from .core import DataEqMixin
 
 logger = logging.getLogger(__name__)
