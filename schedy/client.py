@@ -31,5 +31,5 @@ class Client(object):
     def get_projects(self):
         return self.projects.get_all()
 
-    def disable_project(self, project_id):
-        return self.projects.disable(project_id)
+    def delete_project(self, project_id):
+        return self.projects.delete(project_id)

@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import functools
+from .core import DataEqMixin
 from .pagination import PageObjectsIterator
 from .experiments import Experiments
 from .compat import json_dumps
@@ -14,7 +15,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-class Projects(object):
+class Projects(DataEqMixin, object):
     def __init__(self, core):
         self.core = core
 
@@ -55,7 +56,7 @@ class Projects(object):
         errors._handle_response_errors(response)
 
 
-class Project(object):
+class Project(DataEqMixin, object):
 
     def __init__(self, core, id_, name):
         self.core = core

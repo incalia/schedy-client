@@ -16,7 +16,7 @@ from .core import DataEqMixin
 logger = logging.getLogger(__name__)
 
 
-class Experiments(object):
+class Experiments(DataEqMixin, object):
     def __init__(self, core, project_id):
         self.core = core
         self.project_id = project_id
@@ -77,7 +77,7 @@ class Experiments(object):
         errors._handle_response_errors(response)
 
 
-class Experiment(DataEqMixin):
+class Experiment(DataEqMixin, object):
     def __init__(self, core, project_id, name, hyperparameters, metrics):
         self.core = core
         self.project_id = project_id
