@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 import base64
 from traceback import format_exc
+import math
 import warnings
 import six
 
@@ -49,7 +50,7 @@ def _float_definition(f):
         return '+Inf'
     if f == float('-inf'):
         return '-Inf'
-    if f == float('nan'):
+    if math.isnan(f):
         return 'NaN'
     return float(f)
 

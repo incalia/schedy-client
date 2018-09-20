@@ -10,7 +10,7 @@ import requests
 from . import errors, encoding
 from .compat import json_dumps
 from .pagination import PageObjectsIterator
-from .trials import Trial
+from .trials import Trials, Trial
 from .core import DataEqMixin
 
 logger = logging.getLogger(__name__)
@@ -18,23 +18,23 @@ logger = logging.getLogger(__name__)
 
 class Experiments(DataEqMixin, object):
     def __init__(self, core, project_id):
-        self.core = core
+        self._core = core
         self.project_id = project_id
 
     def create(self, name, hyperparameters, metrics):
-        url = self.core.routes.experiments(self.project_id)
+        url = self._core.routes.experiments(self.project_id)
         content = {
             'name': str(name),
             'hyperparameters': [{'name': str(paramName)} for paramName in hyperparameters],
             'metricsName': [str(metric) for metric in metrics],
         }
         data = json_dumps(content, cls=encoding.JSONEncoder)
-        response = self.core.authenticated_request('POST', url, data=data)
+        response = self._core.authenticated_request('POST', url, data=data)
         if response.status_code == requests.codes.conflict:
             raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
         else:
             errors._handle_response_errors(response)
-        return Experiment(self.core, self.project_id, name,
+        return Experiment(self._core, self.project_id, name,
                           hyperparameters=hyperparameters,
                           metrics=metrics)
 
@@ -49,14 +49,14 @@ class Experiments(DataEqMixin, object):
                 schedy.Experiment: An experiment of the appropriate type.
 
         """
-        url = self.core.routes.experiment(self.project_id, name)
-        response = self.core.authenticated_request('GET', url)
+        url = self._core.routes.experiment(self.project_id, name)
+        response = self._core.authenticated_request('GET', url)
         errors._handle_response_errors(response)
         try:
             content = dict(response.json())
         except ValueError as e:
             raise_from(errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None), e)
-        return Experiment._from_description(self.core, content)
+        return Experiment._from_description(self._core, content)
 
     def get_all(self):
         """
@@ -66,24 +66,25 @@ class Experiments(DataEqMixin, object):
             iterator of :py:class:`schedy.Experiment`: Iterator over all the experiments.
         """
         return PageObjectsIterator(
-            reqfunc=functools.partial(self.core.authenticated_request, 'GET', self.core.routes.experiments(self.project_id)),
-            obj_creation_func=functools.partial(Experiment._from_description, self.core),
+            reqfunc=functools.partial(self._core.authenticated_request, 'GET', self._core.routes.experiments(self.project_id)),
+            obj_creation_func=functools.partial(Experiment._from_description, self._core),
             expected_field='experiments'
         )
 
     def delete(self, name):
-        url = self.core.routes.experiment(self.project_id, name)
-        response = self.core.authenticated_request('DELETE', url)
+        url = self._core.routes.experiment(self.project_id, name)
+        response = self._core.authenticated_request('DELETE', url)
         errors._handle_response_errors(response)
 
 
 class Experiment(DataEqMixin, object):
     def __init__(self, core, project_id, name, hyperparameters, metrics):
-        self.core = core
+        self._core = core
         self.project_id = project_id
         self.name = name
         self.hyperparameters = hyperparameters
         self.metrics = metrics
+        self.trials = Trials(self._core, self.project_id, self.name)
 
     @classmethod
     def _from_description(cls, core, description):
@@ -100,24 +101,12 @@ class Experiment(DataEqMixin, object):
     def create_trial(self, *args, **kwargs):
         return self.trials.create(*args, **kwargs)
 
-    def describe_trial(self, trial_id):
-        url = self.core.routes.trial(self.project_id, self.name, trial_id)
-        response = self.core.authenticated_request('GET', url)
-        return Trial.from_def(response.json())
+    def get_trial(self, *args, **kwargs):
+        return self.trials.get(*args, **kwargs)
 
-    def update_trial(self, trial_id, hyperparameters=None, status=None, metrics=None, metadata=None):
-        # url = self.core.routes.trial(self.project_id, self.name, trial_id)
-        # trial = Trial(self.project_id, self.name, trial_id, hyperparameters, metrics, status, metadata)
-        # response = self.core.authenticated_request('PATCH', url, data=trial.to_def().to_json())
-        # TODO
-        raise NotImplementedError()
+    def get_trials(self, *args, **kwargs):
+        return self.trials.get_all(*args, **kwargs)
 
-    def disable_trial(self, trial_id):
-        return self.core.authenticated_request('DELETE', self.core.routes.trial(self.project_id, self.name, trial_id))
+    def delete_trial(self, *args, **kwargs):
+        return self.trials.delete(*args, **kwargs)
 
-    def get_trials(self):
-        return PageObjectsIterator(
-            reqfunc=functools.partial(self.core.authenticated_request, 'GET', self.core.routes.trials(self.project_id, self.name)),
-            obj_creation_func=Trial.from_def,
-            expected_field='trials'
-        )

@@ -4,7 +4,7 @@ import responses
 import requests
 from requests.compat import urlparse
 import schedy
-import time
+from .test_utils import signin_helper
 
 
 class TestClient(TestCase):
@@ -14,14 +14,7 @@ class TestClient(TestCase):
             'email': 'test@schedy.io',
             'token': 'testToken',
         })
-        responses.add(
-            responses.POST,
-            self.client._core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":' +
-                str(int(time.time()) + 3600) + '}',
-            content_type='application/json',
-            status=requests.codes.ok
-        )
+        signin_helper(self.client._core.routes)
 
     @responses.activate
     def test_create_project(self):
@@ -119,7 +112,7 @@ class TestClient(TestCase):
         self.assertEqual('start=end-token-2', urlparse(responses.calls[3].request.url).query)
 
     @responses.activate
-    def test_disable_client(self):
+    def test_delete_project(self):
         responses.add(
             responses.DELETE,
             self.client._core.routes.project('id-01'),

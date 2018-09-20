@@ -1,10 +1,12 @@
 from unittest import TestCase
 from schedy import Project
 from schedy.experiments import Experiment
-from schedy import Core, Config
+from schedy.core import Core, Config
 import responses
 import requests
 import json
+
+from .test_utils import signin_helper
 
 
 class TestProject(TestCase):
@@ -23,18 +25,10 @@ class TestProject(TestCase):
 
         self.core = Core(Config(config_path=None, config=self.config))
         self.project = Project(self.core, self.project_id, self.project_name)
+        signin_helper(self.core.routes)
 
     @responses.activate
     def test_create_experiment(self):
-
-        responses.add(
-            responses.POST,
-            self.core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":1539961812}',
-            content_type='application/json',
-            status=requests.codes.ok
-        )
-
         responses.add(
             responses.POST,
             self.core.routes.experiments('test-12345'),
@@ -59,15 +53,6 @@ class TestProject(TestCase):
 
     @responses.activate
     def test_get_experiment(self):
-
-        responses.add(
-            responses.POST,
-            self.core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":1539961812}',
-            content_type='application/json',
-            status=requests.codes.ok
-        )
-
         responses.add(
             responses.GET,
             self.core.routes.experiment(self.project_id, self.exp_name),
@@ -92,15 +77,6 @@ class TestProject(TestCase):
 
     @responses.activate
     def test_delete_experiment(self):
-
-        responses.add(
-            responses.POST,
-            self.core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":1539961812}',
-            content_type='application/json',
-            status=requests.codes.ok
-        )
-
         responses.add(
             responses.DELETE,
             self.core.routes.experiment(self.project_id, self.exp_name),
@@ -116,14 +92,6 @@ class TestProject(TestCase):
 
     @responses.activate
     def test_get_experiments(self):
-        responses.add(
-            responses.POST,
-            self.core.routes.signin,
-            body='{"token":"TEST TOKEN","expiresAt":1539961812}',
-            content_type='application/json',
-            status=requests.codes.ok
-        )
-
         responses.add(
             responses.GET,
             self.core.routes.experiments(self.project_id),
@@ -143,9 +111,18 @@ class TestProject(TestCase):
         exp_iterator = self.project.get_experiments()
         exp = next(exp_iterator)
 
-        expected_experiment = Experiment(self.core, self.project_id, self.project_name,
-                                hyperparameters=['layers', 'activation', 'layer sizes'],
-                                metrics=['f1 score', 'accuracy'])
+        expected_experiment = Experiment(self.core, self.project_id,
+                                         self.project_name,
+                                         hyperparameters=[
+                                             'layers',
+                                             'activation',
+                                             'layer sizes'
+                                         ],
+                                         metrics=[
+                                             'f1 score',
+                                             'accuracy'
+                                         ],
+                                         )
 
         self.assertEqual('GET', responses.calls[1].request.method)
         self.assertEqual(expected_experiment, exp)

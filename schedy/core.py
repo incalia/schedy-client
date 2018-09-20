@@ -80,7 +80,7 @@ class Config(object):
 
     _default_config_path = os.path.join(os.path.expanduser('~'), '.schedy', 'client.json')
 
-    def __init__(self, config_path, config):
+    def __init__(self, config_path=None, config=None):
         if config is None:
             if config_path is None:
                 config_path = Config._default_config_path

@@ -17,52 +17,52 @@ logger = logging.getLogger(__name__)
 
 class Projects(DataEqMixin, object):
     def __init__(self, core):
-        self.core = core
+        self._core = core
 
     def get_all(self):
         return PageObjectsIterator(
-            reqfunc=functools.partial(self.core.authenticated_request, 'GET', self.core.routes.projects),
-            obj_creation_func=functools.partial(Project._from_description, self.core),
+            reqfunc=functools.partial(self._core.authenticated_request, 'GET', self._core.routes.projects),
+            obj_creation_func=functools.partial(Project._from_description, self._core),
             expected_field='projects'
         )
 
     def get(self, id_):
         assert len(id_) > 0, 'Project ID cannot be empty'
 
-        url = self.core.routes.project(id_)
-        response = self.core.authenticated_request('GET', url)
+        url = self._core.routes.project(id_)
+        response = self._core.authenticated_request('GET', url)
         errors._handle_response_errors(response)
 
-        return Project._from_description(self.core, response.json())
+        return Project._from_description(self._core, response.json())
 
     def create(self, id_, name):
-        url = self.core.routes.projects
+        url = self._core.routes.projects
         content = {
             'projectID': str(id_),
             'name': str(name),
         }
         data = json_dumps(content, cls=encoding.JSONEncoder)
-        response = self.core.authenticated_request('POST', url, data=data)
+        response = self._core.authenticated_request('POST', url, data=data)
 
         if response.status_code == requests.codes.conflict:
             raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
         else:
             errors._handle_response_errors(response)
-        return Project(self.core, id_, name)
+        return Project(self._core, id_, name)
 
     def delete(self, id_):
-        url = self.core.routes.project(id_)
-        response = self.core.authenticated_request('DELETE', url)
+        url = self._core.routes.project(id_)
+        response = self._core.authenticated_request('DELETE', url)
         errors._handle_response_errors(response)
 
 
 class Project(DataEqMixin, object):
 
     def __init__(self, core, id_, name):
-        self.core = core
+        self._core = core
         self.id_ = id_
         self.name = name
-        self.experiments = Experiments(self.core, self.id_)
+        self.experiments = Experiments(self._core, self.id_)
 
     def create_experiment(self, *args, **kwargs):
         """
@@ -74,13 +74,13 @@ class Project(DataEqMixin, object):
     def get_experiment(self, name):
         return self.experiments.get(name=name)
 
-    def delete_experiment(self, name):
-        url = self.core.routes.experiment(self.id_, name)
-        response = self.core.authenticated_request('DELETE', url)
-        errors._handle_response_errors(response)
-
     def get_experiments(self):
         return self.experiments.get_all()
+
+    def delete_experiment(self, name):
+        url = self._core.routes.experiment(self.id_, name)
+        response = self._core.authenticated_request('DELETE', url)
+        errors._handle_response_errors(response)
 
     @classmethod
     def _from_description(cls, core, description):

@@ -48,7 +48,7 @@ class PageObjectsIterator(object):
         try:
             result = dict(response.json())
         except ValueError as e:
-            raise_from(errors.UnhandledResponseError('Expected page as a dict.'), e)
+            raise_from(errors.UnhandledResponseError('Expected page as a dict.', None), e)
         if result.keys() > _EXPECTED_PAGE_KEYS:
             warnings.warn('Unexpected page keys: {}.'.format(result.keys() - _EXPECTED_PAGE_KEYS))
         try:

@@ -19,10 +19,12 @@ class Trials(object):
         self.experiment_name = experiment_name
 
     def create(self, hyperparameters, metrics=None, status=None, metadata=None):
+        if status is None:
+            status = Trial.QUEUED
         url = self.core.routes.trials(self.project_id, self.experiment_name)
         content = {
             'hyperparameters': {str(k): encoding._scalar_definition(v) for k, v in hyperparameters.items()},
-            'status': str(status) if status is not None else Trial.QUEUED,
+            'status': str(status)
         }
         if metrics:
             content['metrics'] = {str(k): encoding._float_definition(v) for k, v in metrics.items()}
@@ -35,7 +37,18 @@ class Trials(object):
             raise errors.ResourceExistsError(response.text + '\n' + url, response.status_code)
         else:
             errors._handle_response_errors(response)
-        return Trial._from_description(self.core, response, response.headers.get('ETag'))
+        try:
+            content = dict(response.json())
+            id_ = str(content['id'])
+        except (ValueError, KeyError, TypeError) as e:
+            raise_from(errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None), e)
+        return Trial(self.core, self.project_id, self.experiment_name, id_,
+                     status=status,
+                     hyperparameters=hyperparameters,
+                     metrics=metrics,
+                     metadata=metadata,
+                     etag=response.headers.get('ETag'),
+                     )
 
     def get(self, id_):
         url = self.core.routes.trial(self.project_id, self.experiment_name, id_)
@@ -51,7 +64,7 @@ class Trials(object):
         url = self.core.routes.trials(self.project_id, self.experiment_name)
         return PageObjectsIterator(
             reqfunc=functools.partial(self.core.authenticated_request, 'GET', url),
-            obj_creation_func=functools.partial(Trial._from_description, self.core),
+            obj_creation_func=functools.partial(Trial._from_description, self.core, etag=None),
             expected_field='trials'
         )
 
@@ -107,8 +120,8 @@ class Trial(DataEqMixin):
     @classmethod
     def _from_description(cls, core, description, etag):
         try:
-            project_id = description['projectID']
-            experiment_name = description['experimentName']
+            project_id = description['project']
+            experiment_name = description['experiment']
             id_ = description['id']
             status = str(description['status'])
             hyperparameters = {
@@ -157,7 +170,7 @@ class Trial(DataEqMixin):
         headers = dict()
         if safe:
             if self.etag is None:
-                raise errors.UnsafeUpdateError('Cannot perform safe update: previous ETag is None.', -1)
+                raise errors.UnsafeUpdateError('Cannot perform safe update: previous ETag is None.', None)
             else:
                 headers['If-Match'] = self.etag
         url = self._core.routes.trial(self.project_id, self.experiment_name, self.id_)
