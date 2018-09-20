@@ -30,7 +30,9 @@ except ImportError:
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        obj = normalize_type(obj)
+        obj, converted = normalize_type(obj)
+        if converted:
+            return obj
         return super(JSONEncoder, self).default(obj)
 
 
@@ -39,13 +41,14 @@ def normalize_type(obj):
         try:
             val, converted = convert(obj)
             if converted:
-                return val
+                return val, True
         except Exception:
             warnings.warn(format_exc())
-    return obj
+    return obj, False
 
 
 def _float_definition(f):
+    f, _ = normalize_type(f)
     if f == float('inf'):
         return '+Inf'
     if f == float('-inf'):
@@ -56,8 +59,13 @@ def _float_definition(f):
 
 
 def _scalar_definition(obj):
+    obj, _ = normalize_type(obj)
     if obj is None:
         return {'n': None}
+    # As bool inherits from int in Python, this must be tested before testing
+    # integer types
+    if isinstance(obj, bool):
+        return {'b': obj}
     if isinstance(obj, float):
         return {'f': _float_definition(obj)}
     if isinstance(obj, six.integer_types):
@@ -65,9 +73,7 @@ def _scalar_definition(obj):
     if isinstance(obj, six.text_type):
         return {'s': obj}
     if isinstance(obj, six.binary_type):
-        return {'d': base64.b64encode(obj)}
-    if isinstance(obj, bool):
-        return {'b': obj}
+        return {'d': base64.b64encode(obj).decode('utf8')}
     if isinstance(obj, dict):
         return {'m': {six.text_type(k): _scalar_definition(v) for k, v in obj.items()}}
     if isinstance(obj, (list, tuple)):
