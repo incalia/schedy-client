@@ -3,6 +3,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from six import text_type
 import argparse
 import json
 import getpass
@@ -138,7 +139,7 @@ def cmd_list(args):
         try:
             table.sort(args.sort, reverse=args.decreasing)
         except KeyError as e:
-            args.parser.error(str(e))
+            args.parser.error(text_type(e))
     if args.field is not None:
         table.filter_fields(args.field)
     if args.table:

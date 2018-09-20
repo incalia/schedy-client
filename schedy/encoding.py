@@ -7,7 +7,7 @@ import base64
 from traceback import format_exc
 import math
 import warnings
-import six
+from six import text_type, binary_type, integer_types
 
 _additional_convert = []
 
@@ -68,14 +68,14 @@ def _scalar_definition(obj):
         return {'b': obj}
     if isinstance(obj, float):
         return {'f': _float_definition(obj)}
-    if isinstance(obj, six.integer_types):
+    if isinstance(obj, integer_types):
         return {'i': obj}
-    if isinstance(obj, six.text_type):
+    if isinstance(obj, text_type):
         return {'s': obj}
-    if isinstance(obj, six.binary_type):
+    if isinstance(obj, binary_type):
         return {'d': base64.b64encode(obj).decode('utf8')}
     if isinstance(obj, dict):
-        return {'m': {six.text_type(k): _scalar_definition(v) for k, v in obj.items()}}
+        return {'m': {text_type(k): _scalar_definition(v) for k, v in obj.items()}}
     if isinstance(obj, (list, tuple)):
         return {'a': [_scalar_definition(v) for v in obj]}
     raise ValueError('Unsupported scalar type: {}'.format(type(obj)))
@@ -92,13 +92,13 @@ def _from_scalar_definition(definition):
     if type_ == 'i':
         return int(value)
     if type_ == 's':
-        return six.text_type(value)
+        return text_type(value)
     if type_ == 'd':
         return base64.b64decode(value)
     if type_ == 'b':
         return bool(value)
     if type_ == 'm':
-        return {six.text_type(k): _from_scalar_definition(v) for k, v in value.items()}
+        return {text_type(k): _from_scalar_definition(v) for k, v in value.items()}
     if type_ == 'a':
         return [_from_scalar_definition(v) for v in value]
     return ValueError('Unsupported scalar type: {}'.format(type_))

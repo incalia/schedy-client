@@ -3,14 +3,15 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import functools
+import logging
+import requests
+from six import text_type
+
 from .core import DataEqMixin
 from .pagination import PageObjectsIterator
 from .experiments import Experiments
 from .compat import json_dumps
 from . import errors, encoding
-import logging
-
-import requests
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,8 @@ class Projects(DataEqMixin, object):
     def create(self, id_, name):
         url = self._core.routes.projects
         content = {
-            'projectID': str(id_),
-            'name': str(name),
+            'projectID': text_type(id_),
+            'name': text_type(name),
         }
         data = json_dumps(content, cls=encoding.JSONEncoder)
         response = self._core.authenticated_request('POST', url, data=data)

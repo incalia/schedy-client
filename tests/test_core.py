@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from unittest import TestCase
 
 import schedy
 import requests
 import datetime
 import responses
+import json
 
 
 class TestCore(TestCase):
@@ -15,7 +18,7 @@ class TestCore(TestCase):
         self.dt = datetime.datetime.fromtimestamp(1536745835)
 
     @responses.activate
-    def test__authenticate(self):
+    def test_authenticate(self):
         # OK
         responses.add(
             responses.POST,
@@ -34,7 +37,7 @@ class TestCore(TestCase):
 
         request = responses.calls[0].request
         self.assertEqual('POST', request.method)
-        self.assertEqual(b'{"email": "test@schedy.io", "token": "TOKEN", "type": "apiToken"}', request.body)
+        self.assertEqual({'email': 'test@schedy.io', 'token': 'TOKEN', 'type': 'apiToken'}, json.loads(request.body))
         self.assertEqual('test token', self.client._core._jwt_token.token_string)
         self.assertEqual(self.dt, self.client._core._jwt_token.expires_at)
 

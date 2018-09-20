@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from six import raise_from
+from six import raise_from, text_type
 import functools
 
 from .pagination import PageObjectsIterator
@@ -23,13 +23,13 @@ class Trials(DataEqMixin, object):
             status = Trial.QUEUED
         url = self.core.routes.trials(self.project_id, self.experiment_name)
         content = {
-            'hyperparameters': {str(k): encoding._scalar_definition(v) for k, v in hyperparameters.items()},
-            'status': str(status)
+            'hyperparameters': {text_type(k): encoding._scalar_definition(v) for k, v in hyperparameters.items()},
+            'status': text_type(status)
         }
         if metrics:
-            content['metrics'] = {str(k): encoding._float_definition(v) for k, v in metrics.items()}
+            content['metrics'] = {text_type(k): encoding._float_definition(v) for k, v in metrics.items()}
         if metadata:
-            content['metadata'] = {str(k): encoding._scalar_definition(v) for k, v in metadata.items()}
+            content['metadata'] = {text_type(k): encoding._scalar_definition(v) for k, v in metadata.items()}
         data = json_dumps(content, cls=encoding.JSONEncoder)
 
         response = self.core.authenticated_request('POST', url, data=data)
@@ -39,7 +39,7 @@ class Trials(DataEqMixin, object):
             errors._handle_response_errors(response)
         try:
             content = dict(response.json())
-            id_ = str(content['id'])
+            id_ = text_type(content['id'])
         except (ValueError, KeyError, TypeError) as e:
             raise_from(errors.ServerError('Response contains invalid JSON dict:\n' + response.text, None), e)
         return Trial(self.core, self.project_id, self.experiment_name, id_,
@@ -123,7 +123,7 @@ class Trial(DataEqMixin, object):
             project_id = description['project']
             experiment_name = description['experiment']
             id_ = description['id']
-            status = str(description['status'])
+            status = text_type(description['status'])
             hyperparameters = {
                 name: encoding._from_scalar_definition(value)
                 for name, value in description['hyperparameters'].items()
@@ -175,13 +175,13 @@ class Trial(DataEqMixin, object):
                 headers['If-Match'] = self.etag
         url = self._core.routes.trial(self.project_id, self.experiment_name, self.id_)
         content = {
-            'hyperparameters': {str(k): encoding._scalar_definition(v) for k, v in self.hyperparameters.items()},
-            'status': str(self.status),
+            'hyperparameters': {text_type(k): encoding._scalar_definition(v) for k, v in self.hyperparameters.items()},
+            'status': text_type(self.status),
         }
         if self.metrics:
-            content['metrics'] = {str(k): encoding._float_definition(v) for k, v in self.metrics.items()}
+            content['metrics'] = {text_type(k): encoding._float_definition(v) for k, v in self.metrics.items()}
         if self.metadata:
-            content['metadata'] = {str(k): encoding._scalar_definition(v) for k, v in self.metadata.items()}
+            content['metadata'] = {text_type(k): encoding._scalar_definition(v) for k, v in self.metadata.items()}
         data = json_dumps(content, cls=encoding.JSONEncoder)
         response = self._core.authenticated_request('PUT', url, data=data, headers=headers)
         errors._handle_response_errors(response)

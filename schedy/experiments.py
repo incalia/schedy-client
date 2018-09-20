@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-from six import raise_from
+
+from six import raise_from, text_type
 
 import functools
 import logging
@@ -24,9 +25,9 @@ class Experiments(DataEqMixin, object):
     def create(self, name, hyperparameters, metrics):
         url = self._core.routes.experiments(self.project_id)
         content = {
-            'name': str(name),
-            'hyperparameters': [{'name': str(paramName)} for paramName in hyperparameters],
-            'metricsName': [str(metric) for metric in metrics],
+            'name': text_type(name),
+            'hyperparameters': [{'name': text_type(paramName)} for paramName in hyperparameters],
+            'metricsName': [text_type(metric) for metric in metrics],
         }
         data = json_dumps(content, cls=encoding.JSONEncoder)
         response = self._core.authenticated_request('POST', url, data=data)

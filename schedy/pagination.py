@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-from six import raise_from
+from six import raise_from, text_type
 
 import warnings
 
@@ -55,7 +55,7 @@ class PageObjectsIterator(object):
             self._items = list(result[self.expected_field])
             next_token = result.get('end')
             if next_token is not None:
-                self._next_token = str(next_token)
+                self._next_token = text_type(next_token)
             else:
                 self._next_token = None
         except (ValueError, KeyError) as e:

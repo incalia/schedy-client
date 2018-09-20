@@ -9,24 +9,25 @@ import os.path
 
 import requests
 from requests.adapters import HTTPAdapter
-from requests.compat import urljoin, quote as urlquote
+from requests.compat import urljoin
 from requests.packages.urllib3.util.retry import Retry
 from six import raise_from
 
 from . import errors
+from .compat import uurlquote
 from .jwt import JWTTokenAuth
 
 logger = logging.getLogger(__name__)
 
 
-class SchedyRetry(Retry):
+class _Retry(Retry):
     BACKOFF_MAX = 8 * 60
 
     def increment(self, method=None, url=None, response=None, error=None, *args, **kwargs):
         logger.warning('Error while querying Schedy service, retrying.')
         if response is not None:
             logger.warning('Server message: {!s}'.format(response.data))
-        return super(SchedyRetry, self).increment(
+        return super(_Retry, self).increment(
             method=method,
             url=url,
             response=response,
@@ -51,21 +52,20 @@ class _Routes(object):
         self.activate = urljoin(self.root, '/accounts/activate/')
         self.disable = urljoin(self.root, '/accounts/disable/')
 
-        # Project Management
         self.projects = urljoin(self.root, '/projects/')
-        self.project = lambda project_id: urljoin(self.root, '/projects/{}/'.format(urlquote(project_id)))
-        self.project_permissions = lambda project_id: urljoin(self.root, '/projects/{}/permissions/'.format(urlquote(project_id)))
-        self.project_permissions_edit = lambda project_id, email_address: urljoin(self.root, '/projects/{}/permissions/{}/'.format(urlquote(project_id), urlquote(email_address)))
+        self.project = lambda project_id: urljoin(self.root, '/projects/{}/'.format(uurlquote(project_id)))
+        self.project_permissions = lambda project_id: urljoin(self.root, '/projects/{}/permissions/'.format(uurlquote(project_id)))
+        self.project_permissions_edit = lambda project_id, email_address: urljoin(self.root, '/projects/{}/permissions/{}/'.format(uurlquote(project_id), uurlquote(email_address)))
 
         # Experiments management
-        self.experiments = lambda project_id: urljoin(self.root, '/projects/{}/experiments/'.format(urlquote(project_id)))
-        self.experiment = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/'.format(urlquote(project_id), urlquote(exp_name)))
-        self.schedule = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/schedule'.format(urlquote(project_id), urlquote(exp_name)))
-        self.schedulers = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/schedulers'.format(urlquote(project_id), urlquote(exp_name)))
+        self.experiments = lambda project_id: urljoin(self.root, '/projects/{}/experiments/'.format(uurlquote(project_id)))
+        self.experiment = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/'.format(uurlquote(project_id), uurlquote(exp_name)))
+        self.schedule = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/schedule'.format(uurlquote(project_id), uurlquote(exp_name)))
+        self.schedulers = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/schedulers'.format(uurlquote(project_id), uurlquote(exp_name)))
 
         # Trials management
-        self.trials = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/trials/'.format(urlquote(project_id), urlquote(exp_name)))
-        self.trial = lambda project_id, exp_name, trial_id: urljoin(self.root, '/projects/{}/experiments/{}/trials/{}/'.format(urlquote(project_id), urlquote(exp_name), urlquote(trial_id)))
+        self.trials = lambda project_id, exp_name: urljoin(self.root, '/projects/{}/experiments/{}/trials/'.format(uurlquote(project_id), uurlquote(exp_name)))
+        self.trial = lambda project_id, exp_name, trial_id: urljoin(self.root, '/projects/{}/experiments/{}/trials/{}/'.format(uurlquote(project_id), uurlquote(exp_name), uurlquote(trial_id)))
 
     @property
     def root(self):
@@ -155,7 +155,7 @@ class Core(object):
 
     def _make_session(self):
         self._session = requests.Session()
-        retry_mgr = SchedyRetry(
+        retry_mgr = _Retry(
             total=10,
             read=10,
             connect=10,
