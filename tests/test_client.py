@@ -4,7 +4,7 @@ import responses
 import requests
 from requests.compat import urlparse
 import schedy
-from .test_utils import signin_helper
+from .utils import signin_helper
 
 
 class TestClient(TestCase):

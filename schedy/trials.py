@@ -12,7 +12,7 @@ from .core import DataEqMixin
 import requests
 
 
-class Trials(object):
+class Trials(DataEqMixin, object):
     def __init__(self, core, project_id, experiment_name):
         self.core = core
         self.project_id = project_id
@@ -74,7 +74,7 @@ class Trials(object):
         errors._handle_response_errors(response)
 
 
-class Trial(DataEqMixin):
+class Trial(DataEqMixin, object):
     #: Status of a queued trial. Queued trials are returned when calling :py:meth:`schedy.Experiment.next_trial`.
     QUEUED = 'QUEUED'
     #: Status of a trial that is currently running on a worker.

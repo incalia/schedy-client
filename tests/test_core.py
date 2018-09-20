@@ -80,16 +80,3 @@ class TestCore(TestCase):
 
         self.assertEqual('http://fake.schedy.io/', self.client._core.routes.root)
 
-    def test__register_scheduler(self):
-        self.fail()
-
-    def test_authenticated_request(self):
-        self.fail()
-
-    def test__make_session(self):
-        self.fail()
-
-    def test__perform_request(self):
-        self.fail()
-
-

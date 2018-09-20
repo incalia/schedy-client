@@ -6,7 +6,7 @@ import responses
 import requests
 import json
 
-from .test_utils import signin_helper
+from .utils import signin_helper
 
 
 class TestProject(TestCase):
@@ -73,7 +73,7 @@ class TestProject(TestCase):
         request_2 = responses.calls[1].request
 
         self.assertEqual('GET', request_2.method)
-        self.assertEqual(expected_experiment, exp)
+        self.assertEqual(repr(expected_experiment), repr(exp))
 
     @responses.activate
     def test_delete_experiment(self):

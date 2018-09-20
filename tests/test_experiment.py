@@ -5,7 +5,7 @@ import requests
 from requests.compat import urlparse
 import json
 
-from .test_utils import signin_helper
+from .utils import signin_helper
 
 
 class TestExperiment(TestCase):
