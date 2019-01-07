@@ -12,7 +12,10 @@ from requests.compat import urljoin
 import os
 import stat
 import errno
+import sys
 from six.moves import input
+from six import PY2, reraise, raise_from
+import subprocess
 from .compat import json_dumps
 
 DEFAULT_CATEGORY = 'schedy'
@@ -223,9 +226,10 @@ def cmd_gen_token(args):
     if config_dir:
         try:
             os.makedirs(config_dir)
-        except OSError as e:
+        except OSError:
+            t, e, tb = sys.exc_info()
             if e.errno != errno.EEXIST:
-                raise
+                reraise(t, e, tb)
             pass
     with open(config_path, 'w') as config_file:
         config_file.write(json_dumps(new_content, cls=schedy.encoding.SchedyJSONEncoder))
@@ -234,6 +238,136 @@ def cmd_gen_token(args):
     except OSError:
         print('Token file permissions could not be set.')
     print('Your token has been saved to {}.'.format(config_path))
+
+def setup_run(subparsers):
+    desc_text = \
+'''Run a training command using hyperparameters pulled from Schedy.
+
+This command replaces the command line arguments using the following
+formatters:
+    %e: The name of the experiment.
+    %j: The name of the job.
+    %h: The list of the hyperparameters. They will be expanded as a list of
+        parameters (see below).
+    %%: '%' symbol.
+
+The list of hyperparameters will be expanded as follows:
+    --hp1 value1 --hp2 value2 ... --hpn valuen
+Underscores in the hyperparameter names will be replaced by hyphens (e.g. a
+hyperparameter called "num_layer" will be specified using the --num-layer
+option).
+
+If the result could be computed, the training command must output it to its
+standard output, using this format:
+
+    --- RESULTS ---
+    <JSON-encoded dictionary of results>
+    --- END RESULTS ---
+
+The "--- END RESULTS ---" line is optional if nothing else is sent to standard
+output after the results.
+
+Example output:
+
+    --- RESULTS ---
+    {
+        "precision": 0.7,
+        "recall": 0.9
+    }
+    --- END RESULTS ---
+'''
+    parser = subparsers.add_parser('run', help='Run a training command using hyperparameters pulled from Schedy.', description=desc_text, formatter_class=argparse.RawTextHelpFormatter)
+    parser.set_defaults(func=cmd_run)
+    parser.add_argument('--once', action='store_true', help='Run the command only once (instead of running it until there are no jobs left).')
+    parser.add_argument('--allow-empty-results', action='store_true', help='Allow the training command to omit returning any result.')
+    parser.add_argument('--ignore-errors', action='store_true', help='Continue running even if the training command fails.')
+    parser.add_argument('experiment', help='Name of the experiment from which jobs will be pulled.')
+    parser.add_argument('cmd', nargs='+', help='The command to run, which contains formatters as specified above.')
+
+class SubcommandError(RuntimeError):
+    pass
+
+def cmd_run(args):
+    db = schedy.SchedyDB(config_path=args.config)
+    exp = db.get_experiment(args.experiment)
+    while True:
+        try:
+            with exp.next_job() as job:
+                cmd_args = format_cmd_args(args.cmd, job)
+                print('Calling {}'.format(cmd_args))
+                output_block = False
+                output_content = ''
+                with subprocess.Popen(cmd_args, stdout=subprocess.PIPE, bufsize=1) as p:
+                    for line in iter(p.stdout.readline, b''):
+                        if PY2:
+                            sys.stdout.write(line)
+                        else:
+                            sys.stdout.buffer.write(line)
+                        try:
+                            line_str = line.decode()
+                            if line_str.rstrip() == '--- RESULTS ---':
+                                output_block = True
+                            elif line_str.rstrip() == '--- END RESULTS ---':
+                                output_block = False
+                            elif output_block:
+                                output_content += line_str
+                        except UnicodeError:
+                            pass
+                    p.communicate()
+                    if p.returncode != 0:
+                        raise SubcommandError('Command {} failed with return code {}'.format(cmd_args, p.returncode))
+                if not output_content:
+                    raise SubcommandError('No results found in output for command {}'.format(cmd_args))
+                try:
+                    for key, value in dict(json.loads(output_content)).items():
+                        job.results[key] = value
+                except (TypeError, ValueError) as e:
+                    raise_from(SubcommandError('Invalid results from command {}'.format(cmd_args)), e)
+        except (SubcommandError, json.JSONDecodeError):
+            t, e, tb = sys.exc_info()
+            if args.ignore_errors:
+                print(e)
+            else:
+                reraise(t, e, tb)
+        except schedy.errors.NoJobError:
+            break
+        if args.once:
+            break
+
+def format_cmd_args(formatters, job):
+    args = []
+    for format_str in formatters:
+        out_str = ''
+        start_idx = 0
+        while True:
+            pct_idx = format_str.find('%', start_idx)
+            if pct_idx == -1:
+                out_str += format_str[start_idx:]
+                args.append(out_str)
+                break
+            if pct_idx + 1 >= len(format_str):
+                raise RuntimeError('Expected formatting token after % in: {}'.format(format_str))
+            fmt_token = format_str[pct_idx + 1]
+            out_str += format_str[start_idx:pct_idx]
+            if fmt_token == 'e':
+                out_str += job.experiment.name
+            elif fmt_token == 'j':
+                out_str += job.job_id
+            elif fmt_token == 'h':
+                if format_str != '%h':
+                    raise RuntimeError('%h formatter can only be used alone (in {})'.format(format_str))
+                for name, value in job.hyperparameters.items():
+                    args.extend((
+                        '--' + name.replace('_', '-'),
+                        str(value),
+                    ))
+                break
+            elif fmt_token == '%':
+                out_str += '%'
+            else:
+                raise RuntimeError('Unknown formatting token %{} in {}'.format(fmt_token, format_str))
+            start_idx = pct_idx + 2
+    return args
 
 def main():
     parser = argparse.ArgumentParser(description='Manage your Schedy jobs.')
@@ -246,6 +380,7 @@ def main():
     setup_list(subparsers)
     setup_push(subparsers)
     setup_gen_token(subparsers)
+    setup_run(subparsers)
     args = parser.parse_args()
     args.func(args)
 
