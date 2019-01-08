@@ -255,7 +255,7 @@ The list of hyperparameters will be expanded as follows:
     --hp1 value1 --hp2 value2 ... --hpn valuen
 Underscores in the hyperparameter names will be replaced by hyphens (e.g. a
 hyperparameter called "num_layer" will be specified using the --num-layer
-option).
+option). Hyperparameters with null values will not be forwarded.
 
 If the result could be computed, the training command must output it to its
 standard output, using this format:
@@ -357,6 +357,8 @@ def format_cmd_args(formatters, job):
                 if format_str != '%h':
                     raise RuntimeError('%h formatter can only be used alone (in {})'.format(format_str))
                 for name, value in job.hyperparameters.items():
+                    if value is None:
+                        continue
                     args.extend((
                         '--' + name.replace('_', '-'),
                         str(value),
